@@ -12,6 +12,7 @@ class Context():
     '''klasse für die statische variable'''
     usr_dict = 'user dictionary'
     strings = 'irgendwas'
+    updater = 'was anderes'
 
 def main():
     cfg = configparser.ConfigParser()
@@ -23,6 +24,7 @@ def main():
     private_token = prvt.get('private', 'testtoken')
 
     updater = Updater(token=private_token)
+    Context.updater = updater
     dispatcher = updater.dispatcher
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -54,7 +56,33 @@ def main():
     usr_dict = init_users_from_db(updater)
     Context.usr_dict = usr_dict
 
+    job_jede_stunde_gucken = updater.job_queue.run_repeating(look_for_fav_food_job, interval=360, first=0)
+
+
     updater.start_polling()
+
+def look_for_fav_food_job(bot,job):
+    '''looking for fav_food, setting new alarms if nessesary'''
+    usr_dict = Context.usr_dict
+    for yy in usr_dict:
+        usr = usr_dict[yy]
+        fav_food = usr.fav_food
+        td = look_for_fav_food(fav_food)
+        tds, skip_counter = time_for_alert(td)
+        if usr.alarm_status == False:
+            usr.alarm_status = True
+            alarm_counter = 0
+            for time in tds:
+                usr.job_fav_food_list = []
+                usr.job_fav_food_list.append(Context.updater.job_queue.run_once(send_alarm, time,context=[alarm_counter,skip_counter]))
+                alarm_counter += 1
+
+def send_alarm(bot,job):
+    texts = Context.strings['alarm_text'].split('\n')
+    skip_counter = job.context[1]
+    alarm_counter = job.context[0]
+    #send texts[alarm_counter]
+
 
 def init_users_from_db(updater):
     '''ließt zum programmstart die db ein und erstellt ein dictionary mit allen usern, wo die ganzen einträge drinne stehen'''
@@ -202,5 +230,6 @@ def unknown(bot, update):
 def listme(bot, job):
     '''test job, sendet hendrik eine nachricht'''
     bot.send_message(chat_id=129116350, text='blab')
+
 
 main()
