@@ -22,9 +22,10 @@ def datetime_plus_days(date,plusdays):
     dateplusdays = date + datetime.timedelta(days= int(plusdays))
     return dateplusdays
 
-def timedelta_to_hours(td):
-    '''input a timedelta. output the timedelta in hours'''
-    return td.days*24 + td.seconds//3600
+# not in use
+# def timedelta_to_hours(td):
+#     '''input a timedelta. output the timedelta in hours'''
+#     return td.days*24 + td.seconds//3600
 
 def get_food(date,canteen_1=167,canteen_2=201):
     wanted_date = datetime.datetime.strftime(date, '%Y-%m-%d')

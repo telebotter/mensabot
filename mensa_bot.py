@@ -1,6 +1,6 @@
 from user_class import User
 from dbhelper import DBHelper
-from mensa_request import plusdays_date,get_food
+from mensa_request import plusdays_date,get_food,look_for_fav_food,time_for_alert
 import datetime
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
