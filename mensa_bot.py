@@ -14,7 +14,7 @@ class Context():
     strings = 'irgendwas'
     updater = 'was anderes'
     alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
-    #alarms = [55, 50, 45, 40, 39, 38, 37, 36, 35, 34]
+    #alarms = [55, 50, 45, 44, 43, 42, 41, 40, 35, 34]
 
 def main():
     cfg = configparser.ConfigParser()
@@ -69,7 +69,13 @@ def look_for_fav_food_job(bot,job):
     for yy in usr_dict:
         usr = usr_dict[yy]
         fav_food = usr.fav_food
-        td = look_for_fav_food('seelachs')
+        food_counter = 0 #0 = fav_food, 1 = weihnachtsessen
+        special_alarm = 'Seelachs'
+        if look_for_fav_food(special_alarm):
+            td = look_for_fav_food(special_alarm)
+            food_counter = 1
+        else:
+            td = look_for_fav_food(fav_food)
         if td:
             chatid = usr.chat_id
             tds, skip_counter = time_for_alert(td,Context.alarms)
@@ -78,7 +84,7 @@ def look_for_fav_food_job(bot,job):
                 alarm_counter = 0
                 for time in tds:
                     usr.job_fav_food_list = []
-                    usr.job_fav_food_list.append(Context.updater.job_queue.run_once(send_alarm, time,context=[alarm_counter,skip_counter,chatid,usr]))
+                    usr.job_fav_food_list.append(Context.updater.job_queue.run_once(send_alarm, time,context=[alarm_counter,skip_counter,chatid,usr,food_counter]))
                     alarm_counter += 1
 
 def send_alarm(bot,job):
@@ -87,13 +93,20 @@ def send_alarm(bot,job):
     alarm_counter = job.context[0]
     usr = job.context[3]
     chatid = job.context[2]
+    food_counter = job.context[4]
+    if food_counter == 0:
+        message_text = emojize(texts[skip_counter+alarm_counter],use_aliases=True).format(Context.alarms[skip_counter+alarm_counter])
+    elif food_counter == 1:
+        texts = Context.strings['xmas_alarm_text'].split('\n')
+        message_text = emojize(texts[skip_counter+alarm_counter],use_aliases=True).format(Context.alarms[skip_counter+alarm_counter])
     try:
-        bot.send_message(chat_id= chatid ,text= emojize(texts[skip_counter+alarm_counter],use_aliases=True).format(Context.alarms[skip_counter+alarm_counter]) )
+        bot.send_message(chat_id= chatid ,text= message_text )
     except Exception as e:
         print(e)
     if skip_counter+alarm_counter == 9: #10 alarme
         usr.alarm_status = False
-    print(usr.alarm_status)
+    a = datetime.datetime.now()
+    print(a)
 
 
 
