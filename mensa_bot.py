@@ -13,6 +13,8 @@ class Context():
     usr_dict = 'user dictionary'
     strings = 'irgendwas'
     updater = 'was anderes'
+    alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
+    #alarms = [55, 50, 45, 40, 39, 38, 37, 36, 35, 34]
 
 def main():
     cfg = configparser.ConfigParser()
@@ -67,21 +69,33 @@ def look_for_fav_food_job(bot,job):
     for yy in usr_dict:
         usr = usr_dict[yy]
         fav_food = usr.fav_food
-        td = look_for_fav_food(fav_food)
-        tds, skip_counter = time_for_alert(td)
-        if usr.alarm_status == False:
-            usr.alarm_status = True
-            alarm_counter = 0
-            for time in tds:
-                usr.job_fav_food_list = []
-                usr.job_fav_food_list.append(Context.updater.job_queue.run_once(send_alarm, time,context=[alarm_counter,skip_counter]))
-                alarm_counter += 1
+        td = look_for_fav_food('seelachs')
+        if td:
+            chatid = usr.chat_id
+            tds, skip_counter = time_for_alert(td,Context.alarms)
+            if usr.alarm_status == False:
+                usr.alarm_status = True
+                alarm_counter = 0
+                for time in tds:
+                    usr.job_fav_food_list = []
+                    usr.job_fav_food_list.append(Context.updater.job_queue.run_once(send_alarm, time,context=[alarm_counter,skip_counter,chatid,usr]))
+                    alarm_counter += 1
 
 def send_alarm(bot,job):
     texts = Context.strings['alarm_text'].split('\n')
     skip_counter = job.context[1]
     alarm_counter = job.context[0]
-    #send texts[alarm_counter]
+    usr = job.context[3]
+    chatid = job.context[2]
+    try:
+        bot.send_message(chat_id= chatid ,text= emojize(texts[skip_counter+alarm_counter],use_aliases=True).format(Context.alarms[skip_counter+alarm_counter]) )
+    except Exception as e:
+        print(e)
+    if skip_counter+alarm_counter == 9: #10 alarme
+        usr.alarm_status = False
+    print(usr.alarm_status)
+
+
 
 
 def init_users_from_db(updater):

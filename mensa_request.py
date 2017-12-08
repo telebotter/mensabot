@@ -64,12 +64,13 @@ def look_for_fav_food(fav_food):
                 break
     return td
 
-def time_for_alert(td,alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]):
-    '''input one td, output list of td. optional, set list of alarms diffrent #todo(not working jet)'''
+
+def time_for_alert(td,alarms):
+    '''input one td, output list of td. optional, set list of alarms diffrent'''
     tds = []
     skip_counter = 0
     for xx in alarms:
-        minus_td = datetime.timedelta(hours=xx)
+        minus_td = datetime.timedelta(minutes=xx)
         alarm_in = td - minus_td
         if td >= minus_td:# wenn kleiner, dann appenden. sonst nicht
             tds.append(alarm_in)
