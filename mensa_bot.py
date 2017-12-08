@@ -24,7 +24,7 @@ def main():
     # following lines could just be: private_token = 'your-token'
     prvt = configparser.ConfigParser()
     prvt.read('private.ini',encoding='UTF8')
-    private_token = prvt.get('private', 'testtoken')
+    private_token = prvt.get('private', 'realtoken')
     Context.admin_id = int(prvt.get('private', 'admin_id'))
 
     updater = Updater(token=private_token)
