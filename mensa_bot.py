@@ -15,6 +15,7 @@ class Context():
     updater = 'was anderes'
     alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
     #alarms = [55, 50, 45, 44, 43, 42, 41, 40, 35, 34]
+    admin_id = 0
 
 def main():
     cfg = configparser.ConfigParser()
@@ -24,6 +25,7 @@ def main():
     prvt = configparser.ConfigParser()
     prvt.read('private.ini',encoding='UTF8')
     private_token = prvt.get('private', 'testtoken')
+    Context.admin_id = int(prvt.get('private', 'admin_id'))
 
     updater = Updater(token=private_token)
     Context.updater = updater
@@ -48,6 +50,8 @@ def main():
     ueber3morgen_request_handler = CommandHandler('überüberübermorgen', ueber3morgen_request)
     dispatcher.add_handler(ueber3morgen_request_handler)
 
+    admin_echo_all_user_handler = CommandHandler('CrypT1cC0MmanI)!', admin_echo_all_user)
+    dispatcher.add_handler(admin_echo_all_user_handler)
     start_handler = CommandHandler('start', start)
     dispatcher.add_handler(start_handler)
     info_handler = CommandHandler('info', info)
@@ -59,9 +63,19 @@ def main():
     Context.usr_dict = usr_dict
 
     job_jede_stunde_gucken = updater.job_queue.run_repeating(look_for_fav_food_job, interval=360, first=0)
-
-
     updater.start_polling()
+
+def admin_echo_all_user(bot,update):
+    if update.message.chat_id == Context.admin_id:
+        usr_dict = Context.usr_dict
+        for id in usr_dict:
+            usr = usr_dict[id]
+            updatetxt = Context.strings['update_txt_1']
+            try:
+                bot.send_message(chat_id= int(id), text= updatetxt)
+            except Exception as e:
+                print(e)
+
 
 def look_for_fav_food_job(bot,job):
     '''looking for fav_food, setting new alarms if nessesary'''
@@ -70,7 +84,7 @@ def look_for_fav_food_job(bot,job):
         usr = usr_dict[yy]
         fav_food = usr.fav_food
         food_counter = 0 #0 = fav_food, 1 = weihnachtsessen
-        special_alarm = 'Seelachs'
+        special_alarm = 'Weihnachtsessen'
         if look_for_fav_food(special_alarm):
             td = look_for_fav_food(special_alarm)
             food_counter = 1
