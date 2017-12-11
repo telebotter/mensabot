@@ -160,6 +160,11 @@ def user_sets_abo(bot,update,args,job_queue):
     db.change_entry(usr, 'abo', '1')
     usr.abo = '1'
     usr.abo_time = args[0]
+    try: #erst löschen, dann neuen job bauen
+        usr.job_abo.schedule_removal()
+        usr.job_abo = None
+    except Exception as e:
+        print(e)
     try:
         usr_time = usr.get_abo_time()
     except Exception:
@@ -168,8 +173,9 @@ def user_sets_abo(bot,update,args,job_queue):
         usr_time = usr.get_abo_time()
     db.change_entry(usr, 'abo_time', args[0])
     today_or_tomorrow = 0
-    if usr_time > datetime.datetime.strptime('14', '%H%M').time(): today_or_tomorrow = 1
-    job_queue.run_daily(abo_food_request,usr_time,context=[today_or_tomorrow,update.message.chat_id,update.message.from_user.first_name])
+    if usr_time > datetime.datetime.strptime('1400', '%H%M').time():
+        today_or_tomorrow = 1
+    usr.job_abo = job_queue.run_daily(abo_food_request,usr_time,context=[today_or_tomorrow,update.message.chat_id,update.message.from_user.first_name])
     bot.send_message(chat_id=update.message.chat_id,text = emojize(Context.strings['user_set_abo_text'].format(usr_time),use_aliases=True))
 
 def abo_food_request(bot,job):
