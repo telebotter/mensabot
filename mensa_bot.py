@@ -136,7 +136,10 @@ def init_users_from_db(updater):
         usr.abo = i[3]
         usr.abo_time = i[4]
         if usr.abo == '1':
-            usr.job_abo = updater.job_queue.run_daily(listme, usr.get_abo_time())
+            today_or_tomorrow = 0
+            if usr.get_abo_time() > datetime.datetime.strptime('1400', '%H%M').time():
+                today_or_tomorrow = 1
+            usr.job_abo = updater.job_queue.run_daily(abo_food_request, usr.get_abo_time(),context=[today_or_tomorrow,usr.chat_id,usr.first_name])
         user_dict[usr.chat_id]=usr
     return user_dict
 
