@@ -1,6 +1,6 @@
 from user_class import User
 from dbhelper import DBHelper
-from mensa_request import plusdays_date,get_food
+from mensa_request import plusdays_date,get_food,look_for_fav_food,time_for_alert
 import datetime
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
@@ -12,6 +12,10 @@ class Context():
     '''klasse für die statische variable'''
     usr_dict = 'user dictionary'
     strings = 'irgendwas'
+    updater = 'was anderes'
+    alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
+    #alarms = [55, 50, 45, 44, 43, 42, 41, 40, 35, 34]
+    admin_id = 0
 
 def main():
     cfg = configparser.ConfigParser()
@@ -20,9 +24,11 @@ def main():
     # following lines could just be: private_token = 'your-token'
     prvt = configparser.ConfigParser()
     prvt.read('private.ini',encoding='UTF8')
-    private_token = prvt.get('private', 'testtoken')
+    private_token = prvt.get('private', 'realtoken')
+    Context.admin_id = int(prvt.get('private', 'admin_id'))
 
     updater = Updater(token=private_token)
+    Context.updater = updater
     dispatcher = updater.dispatcher
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -44,6 +50,8 @@ def main():
     ueber3morgen_request_handler = CommandHandler('überüberübermorgen', ueber3morgen_request)
     dispatcher.add_handler(ueber3morgen_request_handler)
 
+    admin_echo_all_user_handler = CommandHandler('CrypT1cC0MmanI)!', admin_echo_all_user)
+    dispatcher.add_handler(admin_echo_all_user_handler)
     start_handler = CommandHandler('start', start)
     dispatcher.add_handler(start_handler)
     info_handler = CommandHandler('info', info)
@@ -54,7 +62,68 @@ def main():
     usr_dict = init_users_from_db(updater)
     Context.usr_dict = usr_dict
 
+    job_jede_stunde_gucken = updater.job_queue.run_repeating(look_for_fav_food_job, interval=360, first=0)
     updater.start_polling()
+
+def admin_echo_all_user(bot,update):
+    if update.message.chat_id == Context.admin_id:
+        usr_dict = Context.usr_dict
+        for id in usr_dict:
+            usr = usr_dict[id]
+            updatetxt = Context.strings['update_txt_1']
+            try:
+                bot.send_message(chat_id= int(id), text= updatetxt)
+            except Exception as e:
+                print(e)
+
+
+def look_for_fav_food_job(bot,job):
+    '''looking for fav_food, setting new alarms if nessesary'''
+    usr_dict = Context.usr_dict
+    for yy in usr_dict:
+        usr = usr_dict[yy]
+        fav_food = usr.fav_food
+        food_counter = 0 #0 = fav_food, 1 = weihnachtsessen
+        special_alarm = 'Weihnachtsessen'
+        if look_for_fav_food(special_alarm):
+            td = look_for_fav_food(special_alarm)
+            food_counter = 1
+        else:
+            td = look_for_fav_food(fav_food)
+        if td:
+            chatid = usr.chat_id
+            tds, skip_counter = time_for_alert(td,Context.alarms)
+            if usr.alarm_status == False:
+                usr.alarm_status = True
+                alarm_counter = 0
+                for time in tds:
+                    usr.job_fav_food_list = []
+                    usr.job_fav_food_list.append(Context.updater.job_queue.run_once(send_alarm, time,context=[alarm_counter,skip_counter,chatid,usr,food_counter]))
+                    alarm_counter += 1
+
+def send_alarm(bot,job):
+    texts = Context.strings['alarm_text'].split('\n')
+    skip_counter = job.context[1]
+    alarm_counter = job.context[0]
+    usr = job.context[3]
+    chatid = job.context[2]
+    food_counter = job.context[4]
+    if food_counter == 0:
+        message_text = emojize(texts[skip_counter+alarm_counter],use_aliases=True).format(Context.alarms[skip_counter+alarm_counter])
+    elif food_counter == 1:
+        texts = Context.strings['xmas_alarm_text'].split('\n')
+        message_text = emojize(texts[skip_counter+alarm_counter],use_aliases=True).format(Context.alarms[skip_counter+alarm_counter])
+    try:
+        bot.send_message(chat_id= chatid ,text= message_text )
+    except Exception as e:
+        print(e)
+    if skip_counter+alarm_counter == 9: #10 alarme
+        usr.alarm_status = False
+    a = datetime.datetime.now()
+    print(a)
+
+
+
 
 def init_users_from_db(updater):
     '''ließt zum programmstart die db ein und erstellt ein dictionary mit allen usern, wo die ganzen einträge drinne stehen'''
@@ -67,7 +136,10 @@ def init_users_from_db(updater):
         usr.abo = i[3]
         usr.abo_time = i[4]
         if usr.abo == '1':
-            usr.job_abo = updater.job_queue.run_daily(listme, usr.get_abo_time())
+            today_or_tomorrow = 0
+            if usr.get_abo_time() > datetime.datetime.strptime('1400', '%H%M').time():
+                today_or_tomorrow = 1
+            usr.job_abo = updater.job_queue.run_daily(abo_food_request, usr.get_abo_time(),context=[today_or_tomorrow,usr.chat_id,usr.first_name])
         user_dict[usr.chat_id]=usr
     return user_dict
 
@@ -91,6 +163,11 @@ def user_sets_abo(bot,update,args,job_queue):
     db.change_entry(usr, 'abo', '1')
     usr.abo = '1'
     usr.abo_time = args[0]
+    try: #erst löschen, dann neuen job bauen
+        usr.job_abo.schedule_removal()
+        usr.job_abo = None
+    except Exception as e:
+        print(e)
     try:
         usr_time = usr.get_abo_time()
     except Exception:
@@ -99,8 +176,9 @@ def user_sets_abo(bot,update,args,job_queue):
         usr_time = usr.get_abo_time()
     db.change_entry(usr, 'abo_time', args[0])
     today_or_tomorrow = 0
-    if usr_time > datetime.datetime.strptime('14', '%H%M').time(): today_or_tomorrow = 1
-    job_queue.run_daily(abo_food_request,usr_time,context=[today_or_tomorrow,update.message.chat_id,update.message.from_user.first_name])
+    if usr_time > datetime.datetime.strptime('1400', '%H%M').time():
+        today_or_tomorrow = 1
+    usr.job_abo = job_queue.run_daily(abo_food_request,usr_time,context=[today_or_tomorrow,update.message.chat_id,update.message.from_user.first_name])
     bot.send_message(chat_id=update.message.chat_id,text = emojize(Context.strings['user_set_abo_text'].format(usr_time),use_aliases=True))
 
 def abo_food_request(bot,job):
@@ -202,5 +280,6 @@ def unknown(bot, update):
 def listme(bot, job):
     '''test job, sendet hendrik eine nachricht'''
     bot.send_message(chat_id=129116350, text='blab')
+
 
 main()

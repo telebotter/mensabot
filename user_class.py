@@ -11,6 +11,9 @@ class User():
         self.abo = False
         self.abo_time = '0915'
         self.job_abo = None
+        self.alarm_status = False
+        self.job_fav_food_alarm = None
+        self.job_fav_food_list = None
 
 
     def add(self):
