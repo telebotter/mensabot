@@ -27,6 +27,7 @@ class Context():
     alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
     #alarms = [55, 50, 45, 44, 43, 42, 41, 40, 35, 34]
     admin_id = 0
+    s = session
 
 def main():
     cfg = configparser.ConfigParser()
@@ -82,7 +83,7 @@ def admin_echo_all_user(bot,update):
         # NOTE: No need for this
         #usr_dict = Context.usr_dict
         # just do:
-        users = session.query(User).all()
+        users = Context.s.query(User).all()
         # NOTE: loop will be easier
         #for id in usr_dict:
         for usr in users:
@@ -101,7 +102,7 @@ def look_for_fav_food_job(bot,job):
     # EDIT: 
     #usr_dict = Context.usr_dict
     #for yy in usr_dict:
-    for usr in session.query(User).all():
+    for usr in Context.s.query(User).all():
         #usr = usr_dict[yy]
         fav_food = usr.fav_food
         food_counter = 0 #0 = fav_food, 1 = weihnachtsessen
@@ -148,7 +149,6 @@ def send_alarm(bot,job):
 # NOTE: this is not longer needed
 """
 def init_users_from_db(updater):
-    '''ließt zum programmstart die db ein und erstellt ein dictionary mit allen usern, wo die ganzen einträge drinne stehen'''
     db = DBHelper()
     user_dict = {}
     for i in db.get_items():
@@ -174,7 +174,7 @@ def user_stops_abo(bot,update):
     #usr = Context.usr_dict[str(update.message.chat_id)]
     #db.change_entry(usr, 'abo', '0')
     c_id = update.message.chat_id
-    usr = session.query(User).filter(chat_id == c_id).one()  # returns one or raise E
+    usr = Context.s.query(User).filter(chat_id == c_id).one()  # returns one or raise E
     if not usr.job_abo:
         bot.send_message(chat_id=usr.chat_id, 
                 text=emojize(Context.strings['user_stop_abo_text'], use_aliases=True))
@@ -188,7 +188,7 @@ def user_sets_abo(bot,update,args,job_queue):
     # NOTE: remove another dbHelper
     #db = DBHelper()
     #usr = Context.usr_dict[str(update.message.chat_id)]
-    usr = session.query(User).filter(chat_id==update.message.chat_id).one_or_none()
+    usr = Context.s.query(User).filter(chat_id==update.message.chat_id).one_or_none()
     # NOTE: its maybe usefull to escape this with if usr: .. else: create_user
 
     if len(args) < 1: args.append(usr.abo_time)  #This is smart :)
@@ -228,7 +228,7 @@ def user_sets_abo(bot,update,args,job_queue):
             context=[today_or_tomorrow,update.message.chat_id,
                 update.message.from_user.first_name])
     #NOTE: all above db.change stuff can be done with:
-    session.commit()
+    Context.s.commit()
     bot.send_message(chat_id=update.message.chat_id,text = emojize(Context.strings['user_set_abo_text'].format(usr.abo_time),use_aliases=True))
 
 def abo_food_request(bot,job):
@@ -318,7 +318,7 @@ def start(bot,update):
     #chat_id = str(update.message.chat_id)
     chat_id = update.message.chat_id
     #if not chat_id in Context.usr_dict:
-    if not session.query(User).filter(User.chat_id==chat_id).one_or_none():
+    if not Context.s.query(User).filter(User.chat_id==chat_id).one_or_none():
         # NOTE:
         #usr = User(chat_id)
         usr = User()
@@ -327,8 +327,8 @@ def start(bot,update):
         # NOTE: user stuff bleibt aber das adden geht jetzt leicht anders
         #Context.usr_dict[chat_id] = usr
         #usr.add()
-        session.add(usr)  # add object
-        session.commit()  # save changes
+        Context.s.add(usr)  # add object
+        Context.s.commit()  # save changes
 
 def info(bot,update):
     bot.send_message(chat_id=update.message.chat_id,text=emojize(Context.strings['info'], use_aliases=True),parse_mode='Markdown')

@@ -50,7 +50,6 @@ DB = declarative_base()  # DB is also written as 'Base' in many tutorials
 """ old user class (can be removed if u got all changes)
 
 class User():
-    '''user objekt mit den einträgen '''
 
     def __init__(self,chat_id):
         self.first_name = 'default'
