@@ -10,7 +10,7 @@ import configparser
 # NOTE: added imports
 from models import User
 from models import session
-
+# Hendrik insert line
 # NOTE: removed imports
 #from user_class import User
 #from dbhelper import DBHelper
