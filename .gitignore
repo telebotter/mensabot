@@ -2,4 +2,5 @@ private.ini
 *.sqlite
 __pycache__
 *.pyc
+sql.db
 thumbs.db

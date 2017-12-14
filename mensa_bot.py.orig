@@ -28,8 +28,12 @@ class Context():
     alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
     #alarms = [55, 50, 45, 44, 43, 42, 41, 40, 35, 34]
     admin_id = 0
+<<<<<<< HEAD
+    s = 'nothing'
+=======
     s = session
     job_dict = {}
+>>>>>>> bc187824957cbbb799c449c389788340468d25dc
 
 def main():
     cfg = configparser.ConfigParser()
@@ -184,7 +188,11 @@ def user_stops_abo(bot,update):
     #db.change_entry(usr, 'abo', '0')
     c_id = update.message.chat_id
     usr = Context.s.query(User).filter(User.chat_id == c_id).one()  # returns one or raise E
+<<<<<<< HEAD
+    if not usr.job_abo:
+=======
     if not usr.abo:
+>>>>>>> bc187824957cbbb799c449c389788340468d25dc
         bot.send_message(chat_id=usr.chat_id, 
                 text=emojize(Context.strings['user_stop_abo_text'], use_aliases=True))
         return
@@ -243,8 +251,9 @@ def user_sets_abo(bot,update,args,job_queue):
                 update.message.from_user.first_name])
     #NOTE: all above db.change stuff can be done with:
     Context.s.commit()
-    bot.send_message(chat_id=update.message.chat_id,text = emojize(Context.strings['user_set_abo_text'].format(usr.abo_time),use_aliases=True))
-    Context.s.remove()  # todo: useful?
+    bot.send_message(chat_id=update.message.chat_id,text = emojize(
+        Context.strings['user_set_abo_text'].format(usr.abo_time),use_aliases=True))
+    Context.s.remove()
 
 def abo_food_request(bot,job):
     wanted_date = plusdays_date(job.context[0])
@@ -351,8 +360,6 @@ def info(bot,update):
 
 def unknown(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text=emojize(Context.strings['user_unknown_command_text'],use_aliases=True))
-
-
 
 
 main()
