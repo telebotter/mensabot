@@ -78,11 +78,14 @@ def main():
     #usr_dict = init_users_from_db(updater)
     #Context.usr_dict = usr_dict
     for usr in Context.s.query(User).all(): #todo auslagern in funktion
+        #TODO: time 
         if usr.abo:
-            today_or_tomorrow = 0
-            if usr.get_abo_time() >= datetime.datetime.strptime('1400', '%H%M').time():
+            #NOTE: replaced this abo_time =>str() -> time()
+            today_or_tomorrow = 0  # komische variable vom namen
+           # if usr.get_abo_time() >= datetime.datetime.strptime('1400', '%H%M').time():
+            if usr.abo_time.hour < 14:
                 today_or_tomorrow = 1
-            job_abo = updater.job_queue.run_daily(abo_food_request, usr.get_abo_time(),
+            job_abo = updater.job_queue.run_daily(abo_food_request, usr.abo_time,
                                                   context=[today_or_tomorrow, usr.chat_id, usr.first_name])
             Context.job_dict['abo'] = {usr.chat_id: job_abo}
     Context.s.commit()
