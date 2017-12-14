@@ -1,5 +1,6 @@
 from models import User
 from models import session
+from models import Session
 
 """user = User()
 #user.first_name = 'otto'  # must be set or error (set default or mark nullable)
@@ -21,9 +22,11 @@ users = session.query(User).all()
 usr1 = users[0]
 print(usr1.first_name)
 usr1.job_abo = [1,2,3,]
+session.commit()
 
 def otherwhere():
-    users = session.query(User).all()
+    s2 = Session()
+    users = s2.query(User).all()
     usr1 = users[0]
     usr1.job_abo.append(4)
 

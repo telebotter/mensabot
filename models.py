@@ -30,6 +30,7 @@ import datetime as dt
 from sqlalchemy import *  # serves alternative datatypes and (db-)Columns
 from sqlalchemy.ext.declarative import declarative_base  # this creates the DB
 from sqlalchemy.orm import sessionmaker  # function to setup a DB-Session
+from sqlalchemy.orm import scoped_session  # try to avoid thread error
 
 # Create the abstract DB-'class' before defining our models:
 DB = declarative_base()  # DB is also written as 'Base' in many tutorials
@@ -47,31 +48,6 @@ DB = declarative_base()  # DB is also written as 'Base' in many tutorials
 
 
 
-""" old user class (can be removed if u got all changes)
-
-class User():
-
-    def __init__(self,chat_id):
-        self.first_name = 'default'
-        self.chat_id = chat_id
-        self.fav_food = 'Grünkohl'
-        self.abo = False
-        self.abo_time = '0915'
-        self.job_abo = None
-        self.alarm_status = False
-        self.job_fav_food_alarm = None
-        self.job_fav_food_list = None
-
-
-    def add(self):
-        db = DBHelper(setup = False)
-        db.add_item(self)
-
-    def get_abo_time(self):
-        '''insert string 'HHMM' and returns datetime.time object for job_queue'''
-        time = datetime.datetime.strptime(self.abo_time, '%H%M').time()
-        return time
-"""
 
 
 
@@ -87,7 +63,7 @@ class User(DB):
     first_name = Column(String(200), nullable=True)  
     # You can pass a maxlength, but dont have to
     abo = Column(Boolean, default=False)  # guess u got this
-    abo_time = Column(Time, default=dt.time(9,15,0,0))  # this is clear too?
+    abo_time = Column(Time, default=dt.time(10,40,0,0))  # this is clear too?
     alarm_status = Column(Boolean, default=False)  # should be clear as well..
     mensa_id = Column(Integer, default=201) # for later use
     fav_food = Column(String(350), default='Grünkohl')  # later
@@ -110,5 +86,6 @@ engine = create_engine('sqlite:///sql.db')  # File read/writer
 # setup tables: (the metadata is set by models the moment they expand DB)
 DB.metadata.create_all(engine, checkfirst=True) #check aviods struct change?
 # maybe also session = sessionmaker() works if only one sesion is needed
-Session = sessionmaker(bind=engine)
-session = Session()  # use this session everywhere where its imported
+factory = sessionmaker(bind=engine)
+#session = Session()  # use this session everywhere where its imported
+session = scoped_session(factory)

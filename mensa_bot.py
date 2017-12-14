@@ -1,5 +1,6 @@
 from mensa_request import plusdays_date,get_food,look_for_fav_food,time_for_alert
 import datetime
+import datetime as dt
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from emoji import emojize
@@ -27,7 +28,7 @@ class Context():
     alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
     #alarms = [55, 50, 45, 44, 43, 42, 41, 40, 35, 34]
     admin_id = 0
-    s = session
+    s = 'nothing'
 
 def main():
     cfg = configparser.ConfigParser()
@@ -70,6 +71,7 @@ def main():
     dispatcher.add_handler(info_handler)
     unknown_handler = MessageHandler(Filters.command, unknown)
     dispatcher.add_handler(unknown_handler)
+    Context.s = session
 
     # NOTE: replaced
     #usr_dict = init_users_from_db(updater)
@@ -174,7 +176,7 @@ def user_stops_abo(bot,update):
     #usr = Context.usr_dict[str(update.message.chat_id)]
     #db.change_entry(usr, 'abo', '0')
     c_id = update.message.chat_id
-    usr = Context.s.query(User).filter(chat_id == c_id).one()  # returns one or raise E
+    usr = Context.s.query(User).filter(User.chat_id == c_id).one()  # returns one or raise E
     if not usr.job_abo:
         bot.send_message(chat_id=usr.chat_id, 
                 text=emojize(Context.strings['user_stop_abo_text'], use_aliases=True))
@@ -188,19 +190,24 @@ def user_sets_abo(bot,update,args,job_queue):
     # NOTE: remove another dbHelper
     #db = DBHelper()
     #usr = Context.usr_dict[str(update.message.chat_id)]
-    usr = Context.s.query(User).filter(chat_id==update.message.chat_id).one_or_none()
+    usr = Context.s.query(User).filter(User.chat_id==update.message.chat_id).one_or_none()
     # NOTE: its maybe usefull to escape this with if usr: .. else: create_user
 
-    if len(args) < 1: args.append(usr.abo_time)  #This is smart :)
+    #if len(args) < 1: args.append(usr.abo_time)  # TODO: inverse logic, dont do stuff if no args
+    if len(args) < 1: args.append('1111')
     # NOTE: This was ugly ;) sry
     #db.change_entry(usr, 'abo', '1')
     #usr.abo = '1'
     #usr.abo_time = args[0]
     usr.abo = True
     try:
-        usr.abo_time = dt.time(args[0])
-    except:
-        pass
+        print('try')
+        print(args[0])
+        usr.abo_time = dt.datetime.strptime(args[0], '%H%M').time()
+        print('time: ')
+        print(usr.abo_time)
+    except Exception as e: # NOTE: no error handling :( not even print, made me trouble
+        print(e)
 
     try: #erst löschen, dann neuen job bauen
         usr.job_abo.schedule_removal()
@@ -229,7 +236,9 @@ def user_sets_abo(bot,update,args,job_queue):
                 update.message.from_user.first_name])
     #NOTE: all above db.change stuff can be done with:
     Context.s.commit()
-    bot.send_message(chat_id=update.message.chat_id,text = emojize(Context.strings['user_set_abo_text'].format(usr.abo_time),use_aliases=True))
+    bot.send_message(chat_id=update.message.chat_id,text = emojize(
+        Context.strings['user_set_abo_text'].format(usr.abo_time),use_aliases=True))
+    Context.s.remove()
 
 def abo_food_request(bot,job):
     wanted_date = plusdays_date(job.context[0])
