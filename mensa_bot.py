@@ -11,7 +11,7 @@ import configparser
 # NOTE: added imports
 from models import User
 from models import session
-
+# Hendrik insert line
 # NOTE: removed imports
 #from user_class import User
 #from dbhelper import DBHelper
@@ -37,7 +37,7 @@ def main():
     # following lines could just be: private_token = 'your-token'
     prvt = configparser.ConfigParser()
     prvt.read('private.ini',encoding='UTF8')
-    private_token = prvt.get('private', 'realtoken')
+    private_token = prvt.get('private', 'token')
     Context.admin_id = int(prvt.get('private', 'admin_id'))
 
     updater = Updater(token=private_token)
