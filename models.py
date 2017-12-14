@@ -69,9 +69,12 @@ class User(DB):
     fav_food = Column(String(350), default='Grünkohl')  # later
 
     # define non-database stuff just as common variables (without Column())
+    # NOTE: Moved this to mensa_bot.Context()
+    """
     job_abo = None
     job_fav_food_alarm = None
     job_fav_food_list = None
+    """
 
     # add function is not longer needed, get_abo_timer is also not needed since
     # it's stored as time object in the db not as string
