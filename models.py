@@ -84,12 +84,12 @@ class User(DB):
 
     __tablename__ = 'user'
     chat_id = Column(Integer, primary_key=True)  # Deal?
-    first_name = Column(String(200), nullable=True)  
+    first_name = Column(String(200), nullable=True)
     # You can pass a maxlength, but dont have to
     abo = Column(Boolean, default=False)  # guess u got this
     abo_time = Column(Time, default=dt.time(9,15,0,0))  # this is clear too?
     alarm_status = Column(Boolean, default=False)  # should be clear as well..
-    mensa_id = Column(Integer, default=201) # for later use
+    mensa_id = Column(Integer, default=201) # for later use 167 for uni mensa
     fav_food = Column(String(350), default='Grünkohl')  # later
 
     # define non-database stuff just as common variables (without Column())
