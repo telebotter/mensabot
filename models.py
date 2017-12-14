@@ -29,7 +29,7 @@ import datetime as dt
 
 from sqlalchemy import *  # serves alternative datatypes and (db-)Columns
 from sqlalchemy.ext.declarative import declarative_base  # this creates the DB
-from sqlalchemy.orm import sessionmaker  # function to setup a DB-Session
+from sqlalchemy.orm import sessionmaker, scoped_session  # function to setup a DB-Session
 
 # Create the abstract DB-'class' before defining our models:
 DB = declarative_base()  # DB is also written as 'Base' in many tutorials
@@ -93,9 +93,9 @@ class User(DB):
     fav_food = Column(String(350), default='Grünkohl')  # later
 
     # define non-database stuff just as common variables (without Column())
-    job_abo = None
-    job_fav_food_alarm = None
-    job_fav_food_list = None
+    # job_abo = None
+    # job_fav_food_alarm = None
+    # job_fav_food_list = None
 
     # add function is not longer needed, get_abo_timer is also not needed since
     # it's stored as time object in the db not as string
@@ -109,6 +109,6 @@ class User(DB):
 engine = create_engine('sqlite:///sql.db')  # File read/writer
 # setup tables: (the metadata is set by models the moment they expand DB)
 DB.metadata.create_all(engine, checkfirst=True) #check aviods struct change?
-# maybe also session = sessionmaker() works if only one sesion is needed
-Session = sessionmaker(bind=engine)
-session = Session()  # use this session everywhere where its imported
+# maybe also session = sessionmaker() works if only one session is needed
+factory = sessionmaker(bind=engine)
+session = scoped_session(factory)  # use this session everywhere where its imported

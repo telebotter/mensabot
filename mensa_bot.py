@@ -28,6 +28,7 @@ class Context():
     #alarms = [55, 50, 45, 44, 43, 42, 41, 40, 35, 34]
     admin_id = 0
     s = session
+    job_dict = {}
 
 def main():
     cfg = configparser.ConfigParser()
@@ -74,6 +75,15 @@ def main():
     # NOTE: replaced
     #usr_dict = init_users_from_db(updater)
     #Context.usr_dict = usr_dict
+    for usr in Context.s.query(User).all(): #todo auslagern in funktion
+        if usr.abo:
+            today_or_tomorrow = 0
+            if usr.get_abo_time() >= datetime.datetime.strptime('1400', '%H%M').time():
+                today_or_tomorrow = 1
+            job_abo = updater.job_queue.run_daily(abo_food_request, usr.get_abo_time(),
+                                                  context=[today_or_tomorrow, usr.chat_id, usr.first_name])
+            Context.job_dict['abo'] = {usr.chat_id: job_abo}
+    Context.s.commit()
 
     job_jede_stunde_gucken = updater.job_queue.run_repeating(look_for_fav_food_job, interval=360, first=0)
     updater.start_polling()
@@ -118,17 +128,18 @@ def look_for_fav_food_job(bot,job):
             if usr.alarm_status == False:
                 usr.alarm_status = True
                 alarm_counter = 0
+                fav_food_list = []
                 for time in tds:
-                    usr.job_fav_food_list = []
-                    usr.job_fav_food_list.append(Context.updater.job_queue.run_once(send_alarm, time,context=[alarm_counter,skip_counter,chatid,usr,food_counter]))
+                    fav_food_list.append(Context.updater.job_queue.run_once(send_alarm, time,context=[alarm_counter,skip_counter,chatid,usr,food_counter]))
                     alarm_counter += 1
+                Context.job_dict['fav_foods'] = {usr.chat_id:fav_food_list}
 
 def send_alarm(bot,job):
     texts = Context.strings['alarm_text'].split('\n')
     skip_counter = job.context[1]
     alarm_counter = job.context[0]
-    usr = job.context[3]  # TODO: is this a passed User-Model-Object?
-    chatid = job.context[2]  # TODO: if yes why the other context? its all in usr
+    usr = job.context[3]
+    chatid = job.context[2]
     food_counter = job.context[4]
     if food_counter == 0:
         message_text = emojize(texts[skip_counter+alarm_counter],use_aliases=True).format(Context.alarms[skip_counter+alarm_counter])
@@ -157,11 +168,7 @@ def init_users_from_db(updater):
         usr.fav_food = i[2]
         usr.abo = i[3]
         usr.abo_time = i[4]
-        if usr.abo == '1':
-            today_or_tomorrow = 0
-            if usr.get_abo_time() > datetime.datetime.strptime('1400', '%H%M').time():
-                today_or_tomorrow = 1
-            usr.job_abo = updater.job_queue.run_daily(abo_food_request, usr.get_abo_time(),context=[today_or_tomorrow,usr.chat_id,usr.first_name])
+        
         user_dict[usr.chat_id]=usr
     return user_dict
 """
@@ -174,13 +181,13 @@ def user_stops_abo(bot,update):
     #usr = Context.usr_dict[str(update.message.chat_id)]
     #db.change_entry(usr, 'abo', '0')
     c_id = update.message.chat_id
-    usr = Context.s.query(User).filter(chat_id == c_id).one()  # returns one or raise E
-    if not usr.job_abo:
+    usr = Context.s.query(User).filter(User.chat_id == c_id).one()  # returns one or raise E
+    if not usr.abo:
         bot.send_message(chat_id=usr.chat_id, 
                 text=emojize(Context.strings['user_stop_abo_text'], use_aliases=True))
         return
-    usr.job_abo.schedule_removal()
-    usr.job_abo = None
+    Context.job_dict['abo'][usr.chat_id].schedule_removal()
+    del Context.job_dict['abo'][usr.chat_id]
     bot.send_message(chat_id=update.message.chat_id,text = emojize(Context.strings['user_stop_abo_text'],use_aliases=True))
 
 def user_sets_abo(bot,update,args,job_queue):
@@ -188,7 +195,7 @@ def user_sets_abo(bot,update,args,job_queue):
     # NOTE: remove another dbHelper
     #db = DBHelper()
     #usr = Context.usr_dict[str(update.message.chat_id)]
-    usr = Context.s.query(User).filter(chat_id==update.message.chat_id).one_or_none()
+    usr = Context.s.query(User).filter(User.chat_id==update.message.chat_id).one_or_none()
     # NOTE: its maybe usefull to escape this with if usr: .. else: create_user
 
     if len(args) < 1: args.append(usr.abo_time)  #This is smart :)
@@ -203,8 +210,8 @@ def user_sets_abo(bot,update,args,job_queue):
         pass
 
     try: #erst löschen, dann neuen job bauen
-        usr.job_abo.schedule_removal()
-        usr.job_abo = None
+        Context.job_dict['abo'][usr.chat_id].schedule_removal() #todo
+        del Context.job_dict['abo'][usr.chat_id]
     except Exception as e:
         print(e)
     # NOTE: this block is not needed anylonger, user_time is also not needed
@@ -221,10 +228,10 @@ def user_sets_abo(bot,update,args,job_queue):
     #db.change_entry(usr, 'abo_time', args[0])
 
     today_or_tomorrow = 0
-    if usr.abo_time > datetime.datetime.strptime('1400', '%H%M').time():
+    if usr.abo_time >= datetime.datetime.strptime('1400', '%H%M').time():
         today_or_tomorrow = 1
     #NOTE: replaced usr_time with usr.abo_time
-    usr.job_abo = job_queue.run_daily(abo_food_request,usr.abo_time,
+    Context.job_dict['abo'][usr.chat_id] = job_queue.run_daily(abo_food_request,usr.abo_time,
             context=[today_or_tomorrow,update.message.chat_id,
                 update.message.from_user.first_name])
     #NOTE: all above db.change stuff can be done with:
@@ -329,16 +336,13 @@ def start(bot,update):
         #usr.add()
         Context.s.add(usr)  # add object
         Context.s.commit()  # save changes
+        #todo create user funktion
 
 def info(bot,update):
     bot.send_message(chat_id=update.message.chat_id,text=emojize(Context.strings['info'], use_aliases=True),parse_mode='Markdown')
 
 def unknown(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text=emojize(Context.strings['user_unknown_command_text'],use_aliases=True))
-
-def listme(bot, job):
-    '''test job, sendet hendrik eine nachricht'''
-    bot.send_message(chat_id=129116350, text='blab')
 
 
 main()
