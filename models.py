@@ -66,7 +66,7 @@ class User(DB):
     abo_time = Column(Time, default=dt.time(9,15,0,0))  # this is clear too?
     alarm_status = Column(Boolean, default=False)  # should be clear as well..
     mensa_id = Column(Integer, default=201) # for later use 167 for uni mensa
-    fav_food = Column(String(350), default='Grünkohl')  # later
+    fav_food = Column(String(350), default='weihnachtsessen,grünkohl')
 
     # define non-database stuff just as common variables (without Column())
     # job_abo = None
