@@ -1,5 +1,9 @@
 private.ini
 *.sqlite
+*.db
 __pycache__
 *.pyc
+sql.db
 thumbs.db
+.spyproject
+.spyproject/*
