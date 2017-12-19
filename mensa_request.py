@@ -55,7 +55,6 @@ def look_for_fav_foods(fav_foods):
         essens, mensastatus=get_food(date) #durchsuche essen1 innerhalb der nächsten 6 tage nach grünkohl
         essen_1 = essens[0]
         food_counter = 0
-        print(fav_foods)
         if mensastatus:
             for food in fav_foods:
                 if food.lower() in essen_1.lower():#todo:findet nur ganze wörter

@@ -59,7 +59,7 @@ class User(DB):
     """
 
     __tablename__ = 'user'
-    chat_id = Column(Integer, primary_key=True)  # Deal?
+    chat_id = Column(Integer, primary_key=True)
     first_name = Column(String(200), nullable=True)
     # You can pass a maxlength, but dont have to
     abo = Column(Boolean, default=False)  # guess u got this
