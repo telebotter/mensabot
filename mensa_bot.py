@@ -6,7 +6,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from emoji import emojize
 import logging
 import configparser
-
+#'test line hendrik'
 
 # NOTE: added imports
 from models import User
