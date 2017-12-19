@@ -121,7 +121,10 @@ def look_for_fav_food_job(bot,job):
         #usr = usr_dict[yy]
         fav_food = usr.fav_food
         food_counter = 0 #0 = fav_food, 1 = weihnachtsessen
-        special_alarm = 'Weihnachtsessen'
+        # NOTE: Warum nen special alarm und gk aber in die user klasse?
+        # Sollte es nicht für beides das gleiche sein? ich würd glaub ich 
+        # einfach fav food als liste machen hab nen issue erstellt
+        special_alarm = 'Schollenfilet'  # TODO: REplaced weihnachtsessen zum test
         if look_for_fav_food(special_alarm):
             td = look_for_fav_food(special_alarm)
             food_counter = 1
