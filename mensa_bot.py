@@ -1,4 +1,4 @@
-from mensa_request import plusdays_date,get_food,look_for_fav_food,time_for_alert
+from mensa_request import plusdays_date,get_food,look_for_fav_foods,time_for_alert
 import datetime
 import datetime as dt
 
@@ -26,7 +26,8 @@ class Context():
     strings = 'irgendwas'
     updater = 'was anderes'
     alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
-    #alarms = [55, 50, 45, 44, 43, 42, 41, 40, 35, 34]
+    #hh= 900
+    #alarms = [60+hh, 50+hh, 45+hh, 44+hh, 30+hh, 28+hh, 27+hh, 22+hh, 19+hh, 18+hh]
     admin_id = 0
     s = session
     job_dict = {}
@@ -129,17 +130,16 @@ def look_for_fav_food_job(bot,job):
     #for yy in usr_dict:
     for usr in Context.s.query(User).all():
         #usr = usr_dict[yy]
-        fav_food = usr.fav_food
-        food_counter = 0 #0 = fav_food, 1 = weihnachtsessen
-        # NOTE: Warum nen special alarm und gk aber in die user klasse?
-        # Sollte es nicht für beides das gleiche sein? ich würd glaub ich 
-        # einfach fav food als liste machen hab nen issue erstellt
-        special_alarm = 'Schollenfilet'  # TODO: REplaced weihnachtsessen zum test
-        if look_for_fav_food(special_alarm):
-            td = look_for_fav_food(special_alarm)
-            food_counter = 1
-        else:
-            td = look_for_fav_food(fav_food)
+        fav_foods = usr.fav_food.split(',') #todo development change
+        #food_counter = 0 #1 = grünkohl, 0 = weihnachtsessen
+        # special_alarm = 'Weihnachtsessen'
+        # if look_for_fav_food(special_alarm):
+        #     td = look_for_fav_food(special_alarm)
+        #     food_counter = 1
+        # else:
+        #     td = look_for_fav_food(fav_food) #NOTE hab das hier geändert, mfg hendrik
+        td,food_counter = look_for_fav_foods(fav_foods)
+
         if td:
             chatid = usr.chat_id
             tds, skip_counter = time_for_alert(td,Context.alarms)
@@ -162,9 +162,9 @@ def send_alarm(bot,job):
     usr = job.context[3]
     chatid = job.context[2]
     food_counter = job.context[4]
-    if food_counter == 0:
+    if food_counter == 1:
         message_text = emojize(texts[skip_counter+alarm_counter],use_aliases=True).format(Context.alarms[skip_counter+alarm_counter])
-    elif food_counter == 1:
+    elif food_counter == 0:
         texts = Context.strings['xmas_alarm_text'].split('\n')
         message_text = emojize(texts[skip_counter+alarm_counter],use_aliases=True).format(Context.alarms[skip_counter+alarm_counter])
     try:
@@ -207,9 +207,11 @@ def user_stops_abo(bot,update):
         bot.send_message(chat_id=usr.chat_id, 
                 text=emojize(Context.strings['user_stop_abo_text'], use_aliases=True))
         return
+    usr.abo = False
     Context.job_dict['abo'][usr.chat_id].schedule_removal()
     del Context.job_dict['abo'][usr.chat_id]
     bot.send_message(chat_id=update.message.chat_id,text = emojize(Context.strings['user_stop_abo_text'],use_aliases=True))
+    Context.s.commit()
 
 def user_sets_abo(bot,update,args,job_queue):
     '''startet den täglichen aboservice. defaultwert ist 9 uhr ct, args eingabe mit HHMM'''
@@ -219,6 +221,7 @@ def user_sets_abo(bot,update,args,job_queue):
     usr = Context.s.query(User).filter(User.chat_id==update.message.chat_id).one_or_none()
     
     # NOTE: its maybe usefull to escape this with if usr: .. else: create_user
+
     #if len(args) < 1: args.append(usr.abo_time)  # TODO: inverse logic, dont do stuff if no args
     usr.abo = True
     if len(args) > 0:
