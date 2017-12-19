@@ -44,27 +44,34 @@ def main():
     updater = Updater(token=private_token)
     Context.updater = updater
     dispatcher = updater.dispatcher
-    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s '
+                               '- %(message)s', level=logging.INFO)
 
     stop_abo_handler = CommandHandler('stopabo', user_stops_abo)
     dispatcher.add_handler(stop_abo_handler)
-    set_abo_handler = CommandHandler('abo', user_sets_abo, pass_args=True, pass_job_queue=True)
+    set_abo_handler = CommandHandler('abo', user_sets_abo, pass_args=True,
+                                     pass_job_queue=True)
     dispatcher.add_handler(set_abo_handler)
 
-    user_food_request_handler = CommandHandler('essen', user_food_request, pass_args=True)
+    user_food_request_handler = CommandHandler('essen', user_food_request,
+                                               pass_args=True)
     dispatcher.add_handler(user_food_request_handler)
     heute_request_handler = CommandHandler('heute', heute_request)
     dispatcher.add_handler(heute_request_handler)
     morgen_request_handler = CommandHandler('morgen', morgen_request)
     dispatcher.add_handler(morgen_request_handler)
-    uebermorgen_request_handler = CommandHandler('übermorgen', uebermorgen_request)
+    uebermorgen_request_handler = CommandHandler('übermorgen',
+                                                 uebermorgen_request)
     dispatcher.add_handler(uebermorgen_request_handler)
-    ueber2morgen_request_handler = CommandHandler('überübermorgen', ueber2morgen_request)
+    ueber2morgen_request_handler = CommandHandler('überübermorgen',
+                                                  ueber2morgen_request)
     dispatcher.add_handler(ueber2morgen_request_handler)
-    ueber3morgen_request_handler = CommandHandler('überüberübermorgen', ueber3morgen_request)
+    ueber3morgen_request_handler = CommandHandler('überüberübermorgen',
+                                                  ueber3morgen_request)
     dispatcher.add_handler(ueber3morgen_request_handler)
 
-    admin_echo_all_user_handler = CommandHandler('CrypT1cC0MmanI)!', admin_echo_all_user)
+    admin_echo_all_user_handler = CommandHandler('CrypT1cC0MmanI)!',
+                                                 admin_echo_all_user)
     dispatcher.add_handler(admin_echo_all_user_handler)
     start_handler = CommandHandler('start', start)
     dispatcher.add_handler(start_handler)
@@ -86,11 +93,14 @@ def main():
             if usr.abo_time.hour < 14:
                 today_or_tomorrow = 1
             job_abo = updater.job_queue.run_daily(abo_food_request, usr.abo_time,
-                                                  context=[today_or_tomorrow, usr.chat_id, usr.first_name])
+                                                  context=[today_or_tomorrow,
+                                                           usr.chat_id,
+                                                           usr.first_name])
             Context.job_dict['abo'] = {usr.chat_id: job_abo}
     Context.s.commit()
 
-    job_jede_stunde_gucken = updater.job_queue.run_repeating(look_for_fav_food_job, interval=360, first=0)
+    job_jede_stunde_gucken = updater.job_queue.run_repeating(look_for_fav_food_job,
+                                                             interval=360, first=0)
     updater.start_polling()
 
 def admin_echo_all_user(bot,update):
@@ -138,7 +148,10 @@ def look_for_fav_food_job(bot,job):
                 alarm_counter = 0
                 fav_food_list = []
                 for time in tds:
-                    fav_food_list.append(Context.updater.job_queue.run_once(send_alarm, time,context=[alarm_counter,skip_counter,chatid,usr,food_counter]))
+                    context = [alarm_counter,skip_counter,chatid,usr,food_counter]
+                    alarmjob_tmp = Context.updater.job_queue.run_once(send_alarm,
+                                                        time,context=context)
+                    fav_food_list.append(alarmjob_tmp)
                     alarm_counter += 1
                 Context.job_dict['fav_foods'] = {usr.chat_id:fav_food_list}
 
