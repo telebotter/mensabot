@@ -222,7 +222,12 @@ def user_sets_abo(bot,update,args,job_queue):
 
     #if len(args) < 1: args.append(usr.abo_time)  # TODO: inverse logic, dont do stuff if no args
     usr.abo = True
-    if len(args) > 0:
+    if len(args) >= 2:
+        try:
+            usr.abo_time = dt.datetime.strptime(args[0]+args[1], '%H%M').time()
+        except Exception as e:
+            print(e)
+    elif len(args) > 0:
         try:
             usr.abo_time = dt.datetime.strptime(args[0], '%H%M').time()
         except Exception as er:
