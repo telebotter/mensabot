@@ -217,23 +217,19 @@ def user_sets_abo(bot,update,args,job_queue):
     #db = DBHelper()
     #usr = Context.usr_dict[str(update.message.chat_id)]
     usr = Context.s.query(User).filter(User.chat_id==update.message.chat_id).one_or_none()
+    
     # NOTE: its maybe usefull to escape this with if usr: .. else: create_user
-
     #if len(args) < 1: args.append(usr.abo_time)  # TODO: inverse logic, dont do stuff if no args
-    if len(args) < 1: args.append('1111')
-    # NOTE: This was ugly ;) sry
-    #db.change_entry(usr, 'abo', '1')
-    #usr.abo = '1'
-    #usr.abo_time = args[0]
     usr.abo = True
-    try:
-        print('try')
-        print(args[0])
-        usr.abo_time = dt.datetime.strptime(args[0], '%H%M').time()
-        print('time: ')
-        print(usr.abo_time)
-    except Exception as e: # NOTE: no error handling :( not even print, made me trouble
-        print(e)
+    if len(args) > 0:
+        try:
+            usr.abo_time = dt.datetime.strptime(args[0], '%H%M').time()
+        except Exception as er:
+            try: 
+                usr.abo_time = dt.datetime.strptime(args[0], '%H:%M').time()
+            except Exception as e:
+                print(e)  # todo: log
+
 
     try: #erst löschen, dann neuen job bauen
         Context.job_dict['abo'][usr.chat_id].schedule_removal() #todo
@@ -241,6 +237,7 @@ def user_sets_abo(bot,update,args,job_queue):
     except Exception as e:
         print(e)
     # NOTE: this block is not needed anylonger, user_time is also not needed
+    
     """
     try:
         # NOTE: get_abo_time not needed abo_time is time-obj
