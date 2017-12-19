@@ -3,7 +3,7 @@
 **Täglich übers nächste Essen informiert bleiben**
 
 
-![logo.png]
+!(logo.png)
 Um den Mensabot zu benutzen kannst du ihn einfach bei Telegram anschreiben. Wenn du noch kein Telegram bentutz, kannst du es kostenlos herunterladen und auf sämtlichen Platformen installieren.
 
 [Konversation Starten](https://telegram.me/botaufgruenkohl_bot)
