@@ -46,31 +46,34 @@ def get_food(date,canteen_1=167,canteen_2=201):
         mensastatus = False
     return [essen,mensastatus]
 
-def look_for_fav_food(fav_food):
-    '''guckt die nächsten 6 tage nach was es zu essen gibt, wenn das fav_food dabei ist, wird als ausgabe ein timedelta in stunden ausgegeben'''
+def look_for_fav_foods(fav_foods):
+    '''guckt die nächsten 6 tage nach was es zu essen gibt, wenn das fav_foods dabei ist, wird als ausgabe ein timedelta in stunden ausgegeben
+    als eingabe eine liste mit strings!'''
     td = False
     for ii in range(7):
         date = plusdays_date(ii)
         essens, mensastatus=get_food(date) #durchsuche essen1 innerhalb der nächsten 6 tage nach grünkohl
         essen_1 = essens[0]
+        food_counter = 0
         if mensastatus:
-            if fav_food.lower() in essen_1.lower():
-                today = datetime.datetime.now()
-                event_date = datetime_plus_days(today,ii)
-                wanted_date = datetime.datetime.strftime(event_date, '%Y-%m-%d')
-                twelveoclockthatday = datetime.datetime.strptime(wanted_date, '%Y-%m-%d').replace(hour=12)
-                td = twelveoclockthatday - today #stunden bis gk
-                return td
-                break
-    return td
-
+            for food in fav_foods:
+                if food.lower() in essen_1.lower():#todo:findet nur ganze wörter
+                    today = datetime.datetime.now()
+                    event_date = datetime_plus_days(today,ii)
+                    wanted_date = datetime.datetime.strftime(event_date, '%Y-%m-%d')
+                    twelveoclockthatday = datetime.datetime.strptime(wanted_date, '%Y-%m-%d').replace(hour=12)
+                    td = twelveoclockthatday - today #stunden bis gk
+                    return td,food_counter
+                    break
+                food_counter +=1
+    return td,food_counter
 
 def time_for_alert(td,alarms):
     '''input one td, output list of td. optional, set list of alarms diffrent'''
     tds = []
     skip_counter = 0
     for xx in alarms:
-        minus_td = datetime.timedelta(hours=xx)
+        minus_td = datetime.timedelta(hours=xx)#development minutes, sonst hours
         alarm_in = td - minus_td
         if td >= minus_td:# wenn kleiner, dann appenden. sonst nicht
             tds.append(alarm_in)
