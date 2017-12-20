@@ -10,4 +10,4 @@ Hier sind alle Funktionen vom Mensabot aufgelistet, die wichtig sind um ihn rich
 - `/stopabo` - Stoppt das Abonnement. Du bekommst nun keine täglichen Nachrichten mehr.
 - `/start` - Zeigt dir den Starttext nocheinmal an.
 - `/info` - Zeigt dir nocheinmal alle wichtigen Befehle auf einen Blick.
-- `/essen` - Der `/essen` Befehl ist sehr mächtig und darf nicht in falsche Hände geraten. Gibst du beispielsweise `/essen 4` ein bekommst du das Essen in 4 Tagen. Gibst du `/essen -50` ein, dann reist du in der Zeit zurück und erfähst von Marty McFly was es vor 50 Tagen zu essen gab.
+- `/essen` - Der `/essen` Befehl ist sehr mächtig und darf nicht in falsche Hände geraten. Gibst du beispielsweise `/essen 4` ein bekommst du das Essen in 4 Tagen. Gibst du `/essen -50` ein, dann reist du in der Zeit zurück und erfährst von Marty McFly was es vor 50 Tagen zu essen gab.
