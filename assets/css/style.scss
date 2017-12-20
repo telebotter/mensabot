@@ -7,11 +7,10 @@
     border: none;
     box-shadow: none;
     -web-kit-box-shadow: none;
-    margin-left: auto;
-    margin-right: auto;
+    display: block;
+    margin: 0 auto;
 }
 
-#project-title {
-    margin-left: auto;
-    margin-right: auto;
+#project_title {
+    text-align: center;
 }
