@@ -71,7 +71,10 @@ def time_for_alert(td,alarms):
     tds = []
     skip_counter = 0
     for xx in alarms:
-        minus_td = datetime.timedelta(hours=xx)#development minutes, sonst hours
+        if not Context.debug:
+            minus_td = datetime.timedelta(hours=xx)#development minutes, sonst hours
+        else:
+            minus_td = datetime.timedelta(minutes=xx)
         alarm_in = td - minus_td
         if td >= minus_td:# wenn kleiner, dann appenden. sonst nicht
             tds.append(alarm_in)

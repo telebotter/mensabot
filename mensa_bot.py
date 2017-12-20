@@ -1,4 +1,4 @@
-from mensa_request import plusdays_date,get_food,look_for_fav_foods,time_for_alert
+from mensa_request import plusdays_date,get_food,look_for_fav_foods#,time_for_alert
 import datetime
 import datetime as dt
 
@@ -6,15 +6,10 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from emoji import emojize
 import logging
 import configparser
-#'test line hendrik'
 
-# NOTE: added imports
 from models import User
 from models import session
-# Hendrik insert line
-# NOTE: removed imports
-#from user_class import User
-#from dbhelper import DBHelper
+
 
 
 
@@ -23,11 +18,17 @@ class Context():
     '''klasse für die statische variable'''
     # NOTE: not longer needed
     #usr_dict = 'user dictionary'
+    debug = True
+    if not debug:
+        alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
+    else:
+        hh = 22#aktuelle uhrzeit, stunden
+        mm = 5#minuten
+        min= (35-hh) * 60 +60 - mm#stunden bis mitternacht plus morgen 12 uhr
+        alarms = [min, min-1, min-2, min-3, min-4, min-5, min-6, min-7, min-8, min-9]
+
     strings = 'irgendwas'
     updater = 'was anderes'
-    alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
-    #hh= 1260
-    #alarms = [20+hh, 19+hh, 18+hh, 17+hh, 16+hh, 15+hh, 14+hh, 13+hh, 12+hh, 11+hh]
     admin_id = 0
     s = session
     job_dict = {}
@@ -36,6 +37,9 @@ def main():
     cfg = configparser.ConfigParser()
     cfg.read('gkconfig.ini', encoding='UTF8')
     Context.strings = dict(cfg.items('strings'))
+    Context.debug = cfg.items('settings')
+    if Context.debug:
+        print(Context.debug)
     # following lines could just be: private_token = 'your-token'
     prvt = configparser.ConfigParser()
     prvt.read('private.ini',encoding='UTF8')
@@ -164,14 +168,13 @@ def choose_alarm_text(food):
 
 
 def send_alarm(bot,job):
-    texts = choose_alarm_text(job.context[4])
-    #texts = Context.strings['alarm_text'].split('\n')
+    food = job.context[4]
+    texts = choose_alarm_text(food)
     skip_counter = job.context[1]
     alarm_counter = job.context[0]
     usr = job.context[3]
     chatid = job.context[2]
-    #food = job.context[4]
-    message_text = emojize(texts[skip_counter+alarm_counter],use_aliases=True).format(Context.alarms[skip_counter+alarm_counter])
+    message_text = emojize(texts[skip_counter+alarm_counter],use_aliases=True).format(Context.alarms[skip_counter+alarm_counter],food.title())#.title macht ersten buchstagen zu uppercase
     try:
         bot.send_message(chat_id=chatid ,text=message_text)
     except Exception as e:
@@ -180,24 +183,6 @@ def send_alarm(bot,job):
         usr.alarm_status = False
     a = datetime.datetime.now()
     print(a)
-
-
-
-# NOTE: this is not longer needed
-"""
-def init_users_from_db(updater):
-    db = DBHelper()
-    user_dict = {}
-    for i in db.get_items():
-        usr = User(i[1])
-        usr.first_name = i[0]
-        usr.fav_food = i[2]
-        usr.abo = i[3]
-        usr.abo_time = i[4]
-        
-        user_dict[usr.chat_id]=usr
-    return user_dict
-"""
 
 
 def user_stops_abo(bot,update):
@@ -220,14 +205,11 @@ def user_stops_abo(bot,update):
 
 def user_sets_abo(bot,update,args,job_queue):
     '''startet den täglichen aboservice. defaultwert ist 9 uhr ct, args eingabe mit HHMM'''
-    # NOTE: remove another dbHelper
-    #db = DBHelper()
-    #usr = Context.usr_dict[str(update.message.chat_id)]
     usr = Context.s.query(User).filter(User.chat_id==update.message.chat_id).one_or_none()
-    
     # NOTE: its maybe usefull to escape this with if usr: .. else: create_user
 
     #if len(args) < 1: args.append(usr.abo_time)  # TODO: inverse logic, dont do stuff if no args
+    #todo: zeitausleselogik in funktion auslagern
     usr.abo = True
     if len(args) >= 2:
         try:
@@ -249,26 +231,12 @@ def user_sets_abo(bot,update,args,job_queue):
         del Context.job_dict['abo'][usr.chat_id]
     except Exception as e:
         print(e)
-    # NOTE: this block is not needed anylonger, user_time is also not needed
-    
-    """
-    try:
-        # NOTE: get_abo_time not needed abo_time is time-obj
-        usr_time = usr.get_abo_time()
-    except Exception:
-        usr.abo_time = '0915'
-        args[0] = '0915'
-        usr_time = usr.get_abo_time()
-    """
-    # NOTE: this is done by default now
-    #db.change_entry(usr, 'abo_time', args[0])
-
-    today_or_tomorrow = 0
+    morgen = 0
     if usr.abo_time >= datetime.datetime.strptime('1400', '%H%M').time():
-        today_or_tomorrow = 1
+        morgen = 1
     #NOTE: replaced usr_time with usr.abo_time
     Context.job_dict['abo'] = {usr.chat_id : job_queue.run_daily(abo_food_request,usr.abo_time,
-            context=[today_or_tomorrow,update.message.chat_id,
+            context=[morgen,update.message.chat_id,
                 update.message.from_user.first_name])}
     #NOTE: all above db.change stuff can be done with:
     Context.s.commit()
@@ -358,8 +326,6 @@ def make_pretty_string(essen_list,date,first_name):
 
 def start(bot,update):
     bot.send_message(chat_id=update.message.chat_id,text=emojize(Context.strings['start'], use_aliases=True),parse_mode='Markdown')
-    # NOTE: removed the string (can be int now)
-    #chat_id = str(update.message.chat_id)
     chat_id = update.message.chat_id
     #if not chat_id in Context.usr_dict:
     if not Context.s.query(User).filter(User.chat_id==chat_id).one_or_none():
@@ -374,6 +340,22 @@ def start(bot,update):
         Context.s.add(usr)  # add object
         Context.s.commit()  # save changes
         #todo create user funktion
+
+def time_for_alert(td,alarms):
+    '''input one td, output list of td. optional, set list of alarms diffrent'''
+    tds = []
+    skip_counter = 0
+    for xx in alarms:
+        if not Context.debug:
+            minus_td = datetime.timedelta(hours=xx)#development minutes, sonst hours
+        else:
+            minus_td = datetime.timedelta(minutes=xx)
+        alarm_in = td - minus_td
+        if td >= minus_td:# wenn kleiner, dann appenden. sonst nicht
+            tds.append(alarm_in)
+        else:
+            skip_counter += 1
+    return [tds, skip_counter]
 
 def info(bot,update):
     bot.send_message(chat_id=update.message.chat_id,text=emojize(Context.strings['info'], use_aliases=True),parse_mode='Markdown')
