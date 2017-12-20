@@ -69,19 +69,25 @@ nav ul li a {
     padding:0;
     color: white;
     text-decoration: none;
+    font-weight: normal;
+}
+
+nav ul li a:hover{
+    font-weight: normal;
 }
 
 nav ul li.active {
     background: #f2f2f2;
-    color: blue;
     z-index: 250;
 }
 
 nav ul li.active a {
     color: #0090ff;
     text-decoration:none;
+    font-weight: normal;
 }
 
 nav ul li.active a:hover {
     text-decoration: none;
+    font-weight:normal;
 }
