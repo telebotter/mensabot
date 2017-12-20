@@ -42,11 +42,15 @@
               <li><a href="https://telebotter.github.io/mensabot/functions.html">Funktionen</a></li>
               {% endif %}
               {% if page.title == 'Mithelfen' %}
-              <li><a href="https://telebotter.github.io/mensabot/help.html">Mithelfen</a></li>
+              <li class="active"><a href="https://telebotter.github.io/mensabot/help.html">Mithelfen</a></li>
               {% else %}
               <li><a href="https://telebotter.github.io/mensabot/help.html">Mithelfen</a></li>
               {% endif %}
+              {% if page.title == 'Kontakt' %}
+              <li class="active"><a href="https://telebotter.github.io/mensabot/contact.html">Kontakt</a><li>
+                {% else %}
               <li><a href="https://telebotter.github.io/mensabot/contact.html">Kontakt</a><li>
+                {% endif %}
           </ul>
           </nav>
         </header>
