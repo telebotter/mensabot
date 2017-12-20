@@ -31,10 +31,12 @@
           <!-- nav menu --->
           <ul>
           {% for node in site.pages %}
+            {% if page.group == 'main' %}
             {% if page.url == node.url %}
             <li class="active"><a href="{{node.url}}" class="active">{{node.title}}</a></li>
             {% else %}
-            <li><a href="{{node.url}}">{{node.title}}</a></li>
+            <li><a href="mensabot/{{node.url}}">{{node.title}}</a></li>
+            {% endif %}
             {% endif %}
         {% endfor %}
           </ul>
