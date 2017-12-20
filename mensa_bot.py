@@ -26,8 +26,8 @@ class Context():
     strings = 'irgendwas'
     updater = 'was anderes'
     alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
-    #hh= 900
-    #alarms = [60+hh, 50+hh, 45+hh, 44+hh, 30+hh, 28+hh, 27+hh, 22+hh, 19+hh, 18+hh]
+    #hh= 1260
+    #alarms = [20+hh, 19+hh, 18+hh, 17+hh, 16+hh, 15+hh, 14+hh, 13+hh, 12+hh, 11+hh]
     admin_id = 0
     s = session
     job_dict = {}
@@ -123,11 +123,7 @@ def admin_echo_all_user(bot,update):
 
 def look_for_fav_food_job(bot,job):
     '''looking for fav_food, setting new alarms if nessesary. For each user'''
-    # EDIT: 
-    #usr_dict = Context.usr_dict
-    #for yy in usr_dict:
     for usr in Context.s.query(User).all():
-        #usr = usr_dict[yy]
         fav_foods = usr.fav_food.split(',') #todo development change
         #food_counter = 0 #1 = grünkohl, 0 = weihnachtsessen
         # special_alarm = 'Weihnachtsessen'
@@ -136,37 +132,48 @@ def look_for_fav_food_job(bot,job):
         #     food_counter = 1
         # else:
         #     td = look_for_fav_food(fav_food) #NOTE hab das hier geändert, mfg hendrik
-        td,food_counter = look_for_fav_foods(fav_foods)
+        td,food = look_for_fav_foods(fav_foods)
 
         if td:
             chatid = usr.chat_id
             tds, skip_counter = time_for_alert(td,Context.alarms)
             if usr.alarm_status == False:
                 usr.alarm_status = True
-                alarm_counter = 0
                 fav_food_list = []
+                alarm_counter = 0
                 for time in tds:
-                    context = [alarm_counter,skip_counter,chatid,usr,food_counter]
+                    context = [alarm_counter,skip_counter,chatid,usr,food]
                     alarmjob_tmp = Context.updater.job_queue.run_once(send_alarm,
                                                         time,context=context)
                     fav_food_list.append(alarmjob_tmp)
                     alarm_counter += 1
                 Context.job_dict['fav_foods'] = {usr.chat_id:fav_food_list}
 
+def choose_alarm_text(food):
+    '''input fav_food string, returns a list of alarmstrings'''
+    xmas = Context.strings['xmas_alarm_text'].split('\n')
+    gk = Context.strings['alarm_text'].split('\n')
+    default = Context.strings['default_alarm_text'].split('\n')
+    alarm_dict = {'weihnachtsessen':xmas,
+                  'grünkohl':gk,
+                  'default':default}
+    if food in alarm_dict:
+        return alarm_dict[food]
+    else:
+        return alarm_dict['default']
+
+
 def send_alarm(bot,job):
-    texts = Context.strings['alarm_text'].split('\n')
+    texts = choose_alarm_text(job.context[4])
+    #texts = Context.strings['alarm_text'].split('\n')
     skip_counter = job.context[1]
     alarm_counter = job.context[0]
     usr = job.context[3]
     chatid = job.context[2]
-    food_counter = job.context[4]
-    if food_counter == 1:
-        message_text = emojize(texts[skip_counter+alarm_counter],use_aliases=True).format(Context.alarms[skip_counter+alarm_counter])
-    elif food_counter == 0:
-        texts = Context.strings['xmas_alarm_text'].split('\n')
-        message_text = emojize(texts[skip_counter+alarm_counter],use_aliases=True).format(Context.alarms[skip_counter+alarm_counter])
+    #food = job.context[4]
+    message_text = emojize(texts[skip_counter+alarm_counter],use_aliases=True).format(Context.alarms[skip_counter+alarm_counter])
     try:
-        bot.send_message(chat_id=chatid ,text=message_text )
+        bot.send_message(chat_id=chatid ,text=message_text)
     except Exception as e:
         print(e)
     if skip_counter+alarm_counter == 9: #10 alarme

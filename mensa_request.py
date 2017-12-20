@@ -54,7 +54,6 @@ def look_for_fav_foods(fav_foods):
         date = plusdays_date(ii)
         essens, mensastatus=get_food(date) #durchsuche essen1 innerhalb der nächsten 6 tage nach grünkohl
         essen_1 = essens[0]
-        food_counter = 0
         if mensastatus:
             for food in fav_foods:
                 if food.lower() in essen_1.lower():#todo:findet nur ganze wörter
@@ -63,10 +62,9 @@ def look_for_fav_foods(fav_foods):
                     wanted_date = datetime.datetime.strftime(event_date, '%Y-%m-%d')
                     twelveoclockthatday = datetime.datetime.strptime(wanted_date, '%Y-%m-%d').replace(hour=12)
                     td = twelveoclockthatday - today #stunden bis gk
-                    return td,food_counter
+                    return td,food.lower()
                     break
-                food_counter +=1
-    return td,food_counter
+    return td,None
 
 def time_for_alert(td,alarms):
     '''input one td, output list of td. optional, set list of alarms diffrent'''
