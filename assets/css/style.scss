@@ -31,4 +31,11 @@ header.inner {
 nav ul {
     padding: 0px;
     margin: 0px;
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+nav ul li {
+    display: inline;
 }
