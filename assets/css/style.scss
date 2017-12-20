@@ -13,7 +13,14 @@
 
 #project_title {
     text-align: center;
+    font-size: 26px;
 }
+
+#project_tagline {
+    text-align: center;
+    font-size: 16px;
+}
+
 
 header.inner {
     margin-bottom: 0;
@@ -38,4 +45,6 @@ nav ul {
 
 nav ul li {
     display: inline;
+    width: 50px;
+    font-size: 18px;
 }
