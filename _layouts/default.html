@@ -41,8 +41,12 @@
               {% else %}
               <li><a href="https://telebotter.github.io/mensabot/functions.html">Funktionen</a></li>
               {% endif %}
-              <li><a href="https://telebotter.github.io/mensabot/help.html">Mehr</a></li>
-              <li><a href="https://telebotter.github.io/mensabot/contact.html">Spenden</a><li>
+              {% if page.title == 'Mithelfen' %}
+              <li><a href="https://telebotter.github.io/mensabot/help.html">Mithelfen</a></li>
+              {% else %}
+              <li><a href="https://telebotter.github.io/mensabot/help.html">Mithelfen</a></li>
+              {% endif %}
+              <li><a href="https://telebotter.github.io/mensabot/contact.html">Kontakt</a><li>
           </ul>
           </nav>
         </header>
