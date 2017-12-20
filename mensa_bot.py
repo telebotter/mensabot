@@ -299,7 +299,7 @@ def heute_request(bot, update):
     essens,status=get_food(wanted_date)
     if status:
         food_string= make_pretty_string(essens,wanted_date,update.message.from_user.first_name)
-        bot.send_message(chat_id=update.message.chat_id,text= food_string)
+        bot.send_message(chat_id=update.message.chat_id,text=food_string)
     else:
         bot.send_message(chat_id=update.message.chat_id, text=emojize(Context.strings['mensa_false'], use_aliases=True))
 
@@ -374,7 +374,7 @@ def info(bot,update):
 def unknown(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text=emojize(Context.strings['user_unknown_command_text'],use_aliases=True))
 
-
+##todo##'\U0001F92F \U00002639 \U0001F9D1\U0001F3FD' ...sowas in die gkconfig.ini reinballern!
 
 
 main()
