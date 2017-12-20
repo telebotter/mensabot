@@ -10,4 +10,4 @@ Um den Mensabot zu benutzen kannst du ihn einfach bei Telegram anschreiben. Wenn
 
 Ein Klick auf den Startbutton erlaubt dem Bot mit dir zu schreiben. Mit dem `/abo` Befehl kannst du tägliche  Essensinfos aktivieren. Um dein Lieblingsessen oder die Abozeit zu ändern benutze `/config`. 
 
-[Mehr Funktionen](functions)
+[Mehr Funktionen](functions.md)
