@@ -1,8 +1,12 @@
-# mensabot
-telegram UI for mensa guests of University of Bremen
+# mensabot v0.2
 
-this bot gets data from openmensa.org and passes to singed telegram users
+Dieser Telegrambot informiert seine Nutzer, über das aktuelle Mensaessen.
+Bei bestimmten Events wie zB Grünkohl oder Weihnachtsessen gibt er den Nutzern
+rechtzeitig bescheid. Er ist in python programmiert und verwendet Daten aus
+der openmensa.org Datenbank.
 
- - You can abo a food server, which sends each day the current food
-- Optional alarm when mensa provides favorite food
-- änderung für lukas 
+Mehr Infos auf der [Projekt-Website](https://telebotter.github.io/mensabot)...
+
+Für Version 0.2 geplant:
+* Logging von Infos und Fehlern in Datei
+* /config menü für den Nutzer
