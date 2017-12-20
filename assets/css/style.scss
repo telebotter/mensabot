@@ -48,3 +48,7 @@ nav ul li {
     width: 50px;
     font-size: 18px;
 }
+
+nav ul li.active {
+    background: red;
+}
