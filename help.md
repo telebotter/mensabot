@@ -1,5 +1,5 @@
 ---
-title: Mitmachen
+title: Mithelfen
 ---
 
 Dieser Bot ist ein Open-Source-Projekt, das bedeutet wenn du bock hast
