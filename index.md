@@ -1,3 +1,8 @@
+---
+title: Start
+group: main
+---
+
 **Kein Event oder Lieblingsessen mehr verpassen**
 
 **Täglich übers nächste Essen informiert bleiben**

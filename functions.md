@@ -1,5 +1,6 @@
 ---
 title: Funktionen
+group: main
 ---
 
 Hier sind alle Funktionen vom Mensabot aufgelistet, die wichtig sind um ihn richtig zu bedienen.
