@@ -38,19 +38,23 @@ header.inner {
 nav ul {
     padding: 0px;
     margin: 0px;
+    height: 40px;
     list-style-type: none;
     margin: 0;
     padding: 0;
-    display: inline;
 }
 
 nav ul li {
     font-size: 18px;
+    float: left;
 }
 
 nav ul li a {
     display: block;
     width: 200px;
+    height: 40px;
+    padding:0;
+    color: white;
 }
 
 nav ul li.active {
