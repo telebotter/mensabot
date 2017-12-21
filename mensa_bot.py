@@ -16,8 +16,6 @@ from models import session
 
 class Context():
     '''klasse für die statische variable'''
-    # NOTE: not longer needed
-    #usr_dict = 'user dictionary'
     debug = None
     alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
     strings = 'irgendwas'
@@ -88,40 +86,29 @@ def main():
     dispatcher.add_handler(unknown_handler)
     Context.s = session
 
-    # NOTE: replaced
-    #usr_dict = init_users_from_db(updater)
-    #Context.usr_dict = usr_dict
     for usr in Context.s.query(User).all(): #todo auslagern in funktion
         #TODO: time 
         if usr.abo:
             morgen = 0
             if usr.abo_time.hour >= 14:
                 morgen = 1
-            job_abo = updater.job_queue.run_daily(abo_food_request, usr.abo_time,
+            Context.job_dict['abo'] = {usr.chat_id:updater.job_queue.run_daily(abo_food_request, usr.abo_time,
                                                   context=[morgen,
                                                            usr.chat_id,
-                                                           usr.first_name])
-            Context.job_dict['abo'] = {usr.chat_id: job_abo}
+                                                           usr.first_name])}
     Context.s.commit()
-
     job_jede_stunde_gucken = updater.job_queue.run_repeating(look_for_fav_food_job,
                                                              interval=360, first=0)
     updater.start_polling()
 
 def admin_echo_all_user(bot,update):
     if update.message.chat_id == Context.admin_id:
-        # NOTE: No need for this
-        #usr_dict = Context.usr_dict
-        # just do:
         users = Context.s.query(User).all()
         # NOTE: loop will be easier
         #for id in usr_dict:
         for usr in users:
-            #usr = usr_dict[id]
             updatetxt = Context.strings['update_txt_1']
             try:
-                # NOTE: chat_id is not key but user property
-                #bot.send_message(chat_id= int(id), text= updatetxt)
                 bot.send_message(chat_id=usr.chat_id, text=updatetxt)
             except Exception as e:
                 print(e)  # TODO: use logging.error instead of print
@@ -182,10 +169,6 @@ def send_alarm(bot,job):
 
 def user_stops_abo(bot,update):
     '''stoppet den täglichen aboservice'''
-    # NOTE: this db is not longer needed
-    #db = DBHelper()
-    #usr = Context.usr_dict[str(update.message.chat_id)]
-    #db.change_entry(usr, 'abo', '0')
     c_id = update.message.chat_id
     usr = Context.s.query(User).filter(User.chat_id == c_id).one()  # returns one or raise E
     if not usr.abo:
@@ -203,7 +186,6 @@ def user_sets_abo(bot,update,args,job_queue):
     usr = Context.s.query(User).filter(User.chat_id==update.message.chat_id).one_or_none()
     # NOTE: its maybe usefull to escape this with if usr: .. else: create_user
 
-    #if len(args) < 1: args.append(usr.abo_time)  # TODO: inverse logic, dont do stuff if no args
     #todo: zeitausleselogik in funktion auslagern
     usr.abo = True
     if len(args) >= 2:
@@ -220,7 +202,6 @@ def user_sets_abo(bot,update,args,job_queue):
             except Exception as e:
                 print(e)  # todo: log
 
-
     try: #erst löschen, dann neuen job bauen
         Context.job_dict['abo'][usr.chat_id].schedule_removal() #todo
         del Context.job_dict['abo'][usr.chat_id]
@@ -229,11 +210,9 @@ def user_sets_abo(bot,update,args,job_queue):
     morgen = 0
     if usr.abo_time >= datetime.datetime.strptime('1400', '%H%M').time():
         morgen = 1
-    #NOTE: replaced usr_time with usr.abo_time
     Context.job_dict['abo'] = {usr.chat_id : job_queue.run_daily(abo_food_request,usr.abo_time,
             context=[morgen,update.message.chat_id,
                 update.message.from_user.first_name])}
-    #NOTE: all above db.change stuff can be done with:
     Context.s.commit()
     bot.send_message(chat_id=update.message.chat_id,text = emojize(Context.strings['user_set_abo_text'].format(usr.abo_time),use_aliases=True))
     Context.s.remove()  # todo: useful?
@@ -324,33 +303,12 @@ def start(bot,update):
     chat_id = update.message.chat_id
     #if not chat_id in Context.usr_dict:
     if not Context.s.query(User).filter(User.chat_id==chat_id).one_or_none():
-        # NOTE:
-        #usr = User(chat_id)
         usr = User()
         usr.chat_id = chat_id
         usr.first_name = update.message.from_user.first_name
-        # NOTE: user stuff bleibt aber das adden geht jetzt leicht anders
-        #Context.usr_dict[chat_id] = usr
-        #usr.add()
         Context.s.add(usr)  # add object
         Context.s.commit()  # save changes
         #todo create user funktion
-#
-# def time_for_alert(td,alarms):
-#     '''input one td, output list of td. optional, set list of alarms diffrent'''
-#     tds = []
-#     skip_counter = 0
-#     for xx in alarms:
-#         if not Context.debug:
-#             minus_td = datetime.timedelta(hours=xx)#development minutes, sonst hours
-#         else:
-#             minus_td = datetime.timedelta(minutes=xx)
-#         alarm_in = td - minus_td
-#         if td >= minus_td:# wenn kleiner, dann appenden. sonst nicht
-#             tds.append(alarm_in)
-#         else:
-#             skip_counter += 1
-#     return [tds, skip_counter]
 
 def info(bot,update):
     bot.send_message(chat_id=update.message.chat_id,text=emojize(Context.strings['info'], use_aliases=True),parse_mode='Markdown')
