@@ -86,16 +86,21 @@ def main():
     dispatcher.add_handler(unknown_handler)
     Context.s = session
 
+    Context.job_dict['abo'] = {}
     for usr in Context.s.query(User).all(): #todo auslagern in funktion
         #TODO: time 
         if usr.abo:
             morgen = 0
             if usr.abo_time.hour >= 14:
                 morgen = 1
-            Context.job_dict['abo'] = {usr.chat_id:updater.job_queue.run_daily(abo_food_request, usr.abo_time,
+            usr_job = updater.job_queue.run_daily(abo_food_request, usr.abo_time,
                                                   context=[morgen,
                                                            usr.chat_id,
-                                                           usr.first_name])}
+                                                           usr.first_name])
+
+            Context.job_dict['abo'][usr.chat_id] = usr_job
+
+
     Context.s.commit()
     job_jede_stunde_gucken = updater.job_queue.run_repeating(look_for_fav_food_job,
                                                              interval=360, first=0)
@@ -210,9 +215,9 @@ def user_sets_abo(bot,update,args,job_queue):
     morgen = 0
     if usr.abo_time >= datetime.datetime.strptime('1400', '%H%M').time():
         morgen = 1
-    Context.job_dict['abo'] = {usr.chat_id : job_queue.run_daily(abo_food_request,usr.abo_time,
+    Context.job_dict['abo'][usr.chat_id] = job_queue.run_daily(abo_food_request,usr.abo_time,
             context=[morgen,update.message.chat_id,
-                update.message.from_user.first_name])}
+                update.message.from_user.first_name])
     Context.s.commit()
     bot.send_message(chat_id=update.message.chat_id,text = emojize(Context.strings['user_set_abo_text'].format(usr.abo_time),use_aliases=True))
     Context.s.remove()  # todo: useful?
