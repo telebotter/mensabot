@@ -4,7 +4,7 @@
 
 
 ![logo](logo.png)
-Um den Mensabot zu benutzen kannst du ihn einfach bei Telegram anschreiben. Wenn du noch kein Telegram bentutz, kannst du es kostenlos herunterladen und auf sämtlichen Platformen installieren.
+Um den Mensabot zu benutzen kannst du ihn einfach bei Telegram anschreiben. Wenn du noch kein Telegram bentuzt, kannst du es kostenlos herunterladen und auf sämtlichen Platformen installieren.
 
 [Konversation Starten](https://telegram.me/botaufgruenkohl_bot)
 
