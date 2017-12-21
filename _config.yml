@@ -1,5 +1,5 @@
-title: mensa_bot
-description: Tägliches Mensaessen direkt per Telegram. Außerdem Alarm für Grünkohl, Weihnachtsessen und mehr.
+title: mein_mensa_bot
+description: Einzigartiger Mensainfoservice per Telegram
 show_downloads: false
 google_analytics:
 theme: jekyll-theme-slate
