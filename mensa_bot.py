@@ -1,4 +1,3 @@
-from mensa_request import plusdays_date,get_food,look_for_fav_foods,time_for_alert
 import datetime
 import datetime as dt
 import logging
@@ -7,7 +6,6 @@ import configparser
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from emoji import emojize
 
-# NOTE: added imports
 from models import User
 from models import session
 from mensa_request import plusdays_date, get_food
@@ -48,8 +46,21 @@ def main():
     privatefile = 'private.ini'
     logging.info('Lese Datei: ')
     cfg = configparser.ConfigParser()
-    cfg.read('gkconfig.ini', encoding='UTF8')  # TODO: rename to congif.ini?
-    Context.strings = dict(cfg.items('strings'))  # TODO: eigene datei
+    cfg.read('gkconfig.ini', encoding='UTF8')
+    Context.strings = dict(cfg.items('strings'))
+    Context.debug = cfg.getboolean('settings','debug',fallback=False)
+
+    if not Context.debug:
+        Context.alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
+    else:
+        print('Achtung, Debug ist auf TRUE geschaltet')
+        hh = datetime.datetime.now().hour -24 # aktuelle uhrzeit, stunden
+        mm = datetime.datetime.now().minute  # minuten
+        min = (11 -hh)*60+60-mm+1#stunden bis mitternacht plus morgen 12 uhr
+        Context.alarms = [min, min - 1, min - 2, min - 3, min - 4, min - 5, min - 6, min - 7, min - 8, min - 9]
+        #Context.alarms = [120, 119, 118,117,116,115,114,113,112,111]
+
+    # following lines could just be: private_token = 'your-token'
     prvt = configparser.ConfigParser()
     prvt.read('private.ini', encoding='UTF8')
     token = prvt.get('private', 'token')
@@ -60,6 +71,8 @@ def main():
     updater = Updater(token=token)
     Context.updater = updater
     dispatcher = updater.dispatcher
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s '
+                               '- %(message)s', level=logging.INFO)
 
     # SET HANDLER
     logging.info('Funktionen werden verknüpft...')
@@ -68,6 +81,7 @@ def main():
     set_abo_handler = CommandHandler('abo', user_sets_abo, pass_args=True,
                                      pass_job_queue=True)
     dispatcher.add_handler(set_abo_handler)
+
     user_food_request_handler = CommandHandler('essen', user_food_request,
                                                pass_args=True)
     dispatcher.add_handler(user_food_request_handler)
@@ -135,8 +149,6 @@ def admin_echo_all_user(bot, update):
         for usr in users:
             updatetxt = Context.strings['update_txt_1']
             try:
-                # NOTE: chat_id is not key but user property
-                #bot.send_message(chat_id= int(id), text= updatetxt)
                 bot.send_message(chat_id=usr.chat_id, text=updatetxt)
             except Exception as e:
                 logging.error(e)
@@ -210,14 +222,14 @@ def send_alarm(bot, job):
     message_text = emojize(texts[skip_counter+alarm_counter],
                            use_aliases=True).format(Context.alarms[skip_counter
                                                             + alarm_counter])
-    if skip_counter+alarm_counter == 9:  # 10 alarme
-        usr.alarm_status = False
 
     try:
         bot.send_message(chat_id=chatid, text=message_text)
     except Exception as e:
         logging.error(e)
         logging.error('Konnte Alarmtext nicht Senden.')
+    if skip_counter+alarm_counter == 9: #10 alarme
+        usr.alarm_status = False
 
 
 def user_stops_abo(bot, update):
@@ -246,8 +258,11 @@ def user_sets_abo(bot, update, args, job_queue):
     startet den täglichen aboservice. defaultwert ist 9 uhr ct,
     args eingabe mit HHMM
     """
-    usr = Context.s.query(User).filter(User.chat_id
-                                       == update.message.chat_id).one_or_none()
+    usr = Context.s.query(User).filter(User.chat_id==update.message.chat_id).one_or_none()
+    
+    # NOTE: its maybe usefull to escape this with if usr: .. else: create_user
+
+    # TODO: zeitausleselogik in funktion auslagern
     usr.abo = True
     if len(args) >= 2:
         try:
@@ -272,15 +287,10 @@ def user_sets_abo(bot, update, args, job_queue):
         logging.error('Konnte für User kein neues Abo anlegen')
     today_or_tomorrow = 0
     if usr.abo_time >= datetime.datetime.strptime('1400', '%H%M').time():
-        today_or_tomorrow = 1
-    Context.job_dict['abo'] = {usr.chat_id: job_queue.run_daily(
-        abo_food_request,
-        usr.abo_time,
-        context=[today_or_tomorrow,
-                 update.message.chat_id,
-                 update.message.from_user.first_name
-                 ]
-    )}
+        morgen = 1
+    Context.job_dict['abo'][usr.chat_id] = job_queue.run_daily(abo_food_request,usr.abo_time,
+            context=[morgen,update.message.chat_id,
+                update.message.from_user.first_name])
     Context.s.commit()
     msg_txt = emojize(Context.strings['user_set_abo_text'].format(usr.abo_time),
                       use_aliases=True)
@@ -418,7 +428,7 @@ def start(bot, update):
         Context.s.add(usr)  # add object
         Context.s.commit()  # save changes
         logging.info('Neuen User registriert.')
-        # todo create user funktion
+        # TODO: create user funktion
 
 
 def info(bot,update):
