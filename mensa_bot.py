@@ -26,6 +26,7 @@ class Context:
     admin_id = 0
     s = session
     job_dict = {}
+    job_dict['abo'] = {}
 
 
 def main():
@@ -37,7 +38,8 @@ def main():
     logformat = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(format=logformat,
                         level=logging.INFO,
-                        filename='bot.log')
+                        #filename='bot.log'
+                        )
     logging.info('\n')  # leerzeile zwischen programm neustarts
 
     # READ CONFIG
@@ -152,7 +154,8 @@ def admin_echo_all_user(bot, update):
                 bot.send_message(chat_id=usr.chat_id, text=updatetxt)
             except Exception as e:
                 logging.error(e)
-                logging.error('Senden an User fehlgeschlagen.')
+                logging.error('Senden an folgenden User fehlgeschlagen:')
+                logging.error(str(usr.chat_id + '; ' + str(usr.first_name)))
 
 
 def look_for_fav_food_job(bot, job):
@@ -227,7 +230,8 @@ def send_alarm(bot, job):
         bot.send_message(chat_id=chatid, text=message_text)
     except Exception as e:
         logging.error(e)
-        logging.error('Konnte Alarmtext nicht Senden.')
+        logging.error('Konnte Alarmtext nicht Senden an:')
+        logging.error(str(usr.chat_id) + '; ' + str(usr.first_name))
     if skip_counter+alarm_counter == 9: #10 alarme
         usr.alarm_status = False
 
@@ -283,9 +287,10 @@ def user_sets_abo(bot, update, args, job_queue):
         Context.job_dict['abo'][usr.chat_id].schedule_removal() #todo
         del Context.job_dict['abo'][usr.chat_id]
     except Exception as e:
-        logging.error(e)
-        logging.error('Konnte für User kein neues Abo anlegen')
-    today_or_tomorrow = 0
+        logging.debug(e)
+        logging.debug('Konnte für User kein abojob löschen: ')
+        logging.debug(str(usr.chat_id) + '; ' + str(usr.first_name))
+    morgen = 0
     if usr.abo_time >= datetime.datetime.strptime('1400', '%H%M').time():
         morgen = 1
     Context.job_dict['abo'][usr.chat_id] = job_queue.run_daily(abo_food_request,usr.abo_time,
@@ -427,17 +432,19 @@ def start(bot, update):
         usr.first_name = update.message.from_user.first_name
         Context.s.add(usr)  # add object
         Context.s.commit()  # save changes
-        logging.info('Neuen User registriert.')
+        logging.info('Neuen User registriert:')
+        logging.info(str(usr.chat_id) + '; ' + str(usr.first_name))
         # TODO: create user funktion
 
 
-def info(bot,update):
+def info(bot, update):
     info_txt = emojize(Context.strings['info'], use_aliases=True)
     bot.send_message(chat_id=update.message.chat_id, text=info_txt,
                      parse_mode='Markdown')
 
 def unknown(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text=emojize(Context.strings['user_unknown_command_text'],use_aliases=True))
+    bot.send_message(chat_id=update.message.chat_id, text=emojize(
+        Context.strings['user_unknown_command_text'], use_aliases=True))
 
 # TODO: '\U0001F92F \U00002639 \U0001F9D1\U0001F3FD'
 # ...sowas in die gkconfig.ini reinballern!
