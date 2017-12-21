@@ -50,7 +50,11 @@ def look_for_fav_foods(fav_foods):
     '''guckt die nächsten 6 tage nach was es zu essen gibt, wenn das fav_foods dabei ist, wird als ausgabe ein timedelta in stunden ausgegeben
     als eingabe eine liste mit strings!'''
     td = False
-    for ii in range(7):
+    anf=0
+    end=7
+    if datetime.datetime.now().time()>datetime.datetime.strptime('1200','%H%M').time():#wenn nach 12 uhr, dann guck nichtmehr heute, sondern nur noch die nächsten 6 tage
+        anf=1
+    for ii in range(anf,end):
         date = plusdays_date(ii)
         essens, mensastatus=get_food(date) #durchsuche essen1 innerhalb der nächsten 6 tage nach grünkohl
         essen_1 = essens[0]
@@ -66,12 +70,12 @@ def look_for_fav_foods(fav_foods):
                     break
     return td,None
 
-def time_for_alert(td,alarms):
+def time_for_alert(td,alarms,debug_var):
     '''input one td, output list of td. optional, set list of alarms diffrent'''
     tds = []
     skip_counter = 0
     for xx in alarms:
-        if not Context.debug:
+        if not debug_var:
             minus_td = datetime.timedelta(hours=xx)#development minutes, sonst hours
         else:
             minus_td = datetime.timedelta(minutes=xx)

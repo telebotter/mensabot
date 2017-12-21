@@ -1,4 +1,4 @@
-from mensa_request import plusdays_date,get_food,look_for_fav_foods#,time_for_alert
+from mensa_request import plusdays_date,get_food,look_for_fav_foods,time_for_alert
 import datetime
 import datetime as dt
 
@@ -18,15 +18,8 @@ class Context():
     '''klasse für die statische variable'''
     # NOTE: not longer needed
     #usr_dict = 'user dictionary'
-    debug = True
-    if not debug:
-        alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
-    else:
-        hh = 22#aktuelle uhrzeit, stunden
-        mm = 5#minuten
-        min= (35-hh) * 60 +60 - mm#stunden bis mitternacht plus morgen 12 uhr
-        alarms = [min, min-1, min-2, min-3, min-4, min-5, min-6, min-7, min-8, min-9]
-
+    debug = None
+    alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
     strings = 'irgendwas'
     updater = 'was anderes'
     admin_id = 0
@@ -37,9 +30,18 @@ def main():
     cfg = configparser.ConfigParser()
     cfg.read('gkconfig.ini', encoding='UTF8')
     Context.strings = dict(cfg.items('strings'))
-    Context.debug = cfg.items('settings')
-    if Context.debug:
-        print(Context.debug)
+    Context.debug = cfg.getboolean('settings','debug',fallback=False)
+
+    if not Context.debug:
+        Context.alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
+    else:
+        print('Achtung, Debug ist auf TRUE geschaltet')
+        hh = datetime.datetime.now().hour -24 # aktuelle uhrzeit, stunden
+        mm = datetime.datetime.now().minute  # minuten
+        min = (11 -hh)*60+60-mm+1#stunden bis mitternacht plus morgen 12 uhr
+        Context.alarms = [min, min - 1, min - 2, min - 3, min - 4, min - 5, min - 6, min - 7, min - 8, min - 9]
+        #Context.alarms = [120, 119, 118,117,116,115,114,113,112,111]
+
     # following lines could just be: private_token = 'your-token'
     prvt = configparser.ConfigParser()
     prvt.read('private.ini',encoding='UTF8')
@@ -129,18 +131,11 @@ def look_for_fav_food_job(bot,job):
     '''looking for fav_food, setting new alarms if nessesary. For each user'''
     for usr in Context.s.query(User).all():
         fav_foods = usr.fav_food.split(',') #todo development change
-        #food_counter = 0 #1 = grünkohl, 0 = weihnachtsessen
-        # special_alarm = 'Weihnachtsessen'
-        # if look_for_fav_food(special_alarm):
-        #     td = look_for_fav_food(special_alarm)
-        #     food_counter = 1
-        # else:
-        #     td = look_for_fav_food(fav_food) #NOTE hab das hier geändert, mfg hendrik
         td,food = look_for_fav_foods(fav_foods)
 
         if td:
             chatid = usr.chat_id
-            tds, skip_counter = time_for_alert(td,Context.alarms)
+            tds, skip_counter = time_for_alert(td,Context.alarms,Context.debug)
             if usr.alarm_status == False:
                 usr.alarm_status = True
                 fav_food_list = []
@@ -340,22 +335,22 @@ def start(bot,update):
         Context.s.add(usr)  # add object
         Context.s.commit()  # save changes
         #todo create user funktion
-
-def time_for_alert(td,alarms):
-    '''input one td, output list of td. optional, set list of alarms diffrent'''
-    tds = []
-    skip_counter = 0
-    for xx in alarms:
-        if not Context.debug:
-            minus_td = datetime.timedelta(hours=xx)#development minutes, sonst hours
-        else:
-            minus_td = datetime.timedelta(minutes=xx)
-        alarm_in = td - minus_td
-        if td >= minus_td:# wenn kleiner, dann appenden. sonst nicht
-            tds.append(alarm_in)
-        else:
-            skip_counter += 1
-    return [tds, skip_counter]
+#
+# def time_for_alert(td,alarms):
+#     '''input one td, output list of td. optional, set list of alarms diffrent'''
+#     tds = []
+#     skip_counter = 0
+#     for xx in alarms:
+#         if not Context.debug:
+#             minus_td = datetime.timedelta(hours=xx)#development minutes, sonst hours
+#         else:
+#             minus_td = datetime.timedelta(minutes=xx)
+#         alarm_in = td - minus_td
+#         if td >= minus_td:# wenn kleiner, dann appenden. sonst nicht
+#             tds.append(alarm_in)
+#         else:
+#             skip_counter += 1
+#     return [tds, skip_counter]
 
 def info(bot,update):
     bot.send_message(chat_id=update.message.chat_id,text=emojize(Context.strings['info'], use_aliases=True),parse_mode='Markdown')
