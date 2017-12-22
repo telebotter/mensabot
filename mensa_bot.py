@@ -17,9 +17,10 @@ class Context:
     Klasse zum speichern statischer Variablen
     """
     strings = ''  # leere variablen als platzhalter
+    strings_alarm = ''
     updater = ''
     # TODO: In config.ini oder strings.ini? besser als hardcode
-    alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
+    alarms = ''
     #hh= 1260
     #alarms = [20+hh, 19+hh, 18+hh, 17+hh, 16+hh, 15+hh, 14+hh, 13+hh, 12+hh,
     # 11+hh]
@@ -35,7 +36,10 @@ def main():
     """
 
     # SETUP LOGGING
-    logformat = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    # TODO: Traceback eventuell in ne extra file? sodass nur error in bot.log
+    #  steht und der error mit traceback in error.log? da die sehr lang sein
+    # können
+    logformat = '%(asctime)s -  %(levelname)s - %(message)s'
     logging.basicConfig(format=logformat,
                         level=logging.INFO,
                         #filename='bot.log'
@@ -43,38 +47,47 @@ def main():
     logging.info('\n')  # leerzeile zwischen programm neustarts
 
     # READ CONFIG
+    # NOTE ich hab das einlesen verändert, aber nach dem einlesen sollte
+    # Context.strings noch genauso wie vorher sein, nur dass die alarme
+    # nichtmehr drini sind, die sind jetzt in Context.strings_alarm
     configfile = 'config.ini'
     stringsfile = 'strings.ini'
     privatefile = 'private.ini'
-    logging.info('Lese Datei: ')
+    logging.info('Lese Datei: ' + configfile)
     cfg = configparser.ConfigParser()
-    cfg.read('gkconfig.ini', encoding='UTF8')
-    Context.strings = dict(cfg.items('strings'))
-    Context.debug = cfg.getboolean('settings','debug',fallback=False)
+    cfg.read(configfile, encoding='UTF8')
+    logging.info('Lese Datei: ' + stringsfile)
+    strg = configparser.ConfigParser()
+    strg.read(stringsfile)
+    Context.strings = dict(strg.items('strings'))
+    logging.info('Lese Datei: ' + privatefile)
+    prvt = configparser.ConfigParser()
+    prvt.read('private.ini', encoding='UTF8')
+    Context.debug = cfg.getboolean('settings', 'debug', fallback=False)
+    token = prvt.get('private', 'token')
+    Context.admin_id = int(prvt.get('private', 'admin_id', fallback=0))
 
     if not Context.debug:
         Context.alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
     else:
-        print('Achtung, Debug ist auf TRUE geschaltet')
+        # NOTE: kannste in einem satz sagen was das macht? auf wann sind die
+        # alarme im debug scharfgestellt? ich denke es ist im bereich minuten?
+        logging.warning('Achtung, Debug ist TRUE')
         hh = datetime.datetime.now().hour -24 # aktuelle uhrzeit, stunden
         mm = datetime.datetime.now().minute  # minuten
         min = (11 -hh)*60+60-mm+1#stunden bis mitternacht plus morgen 12 uhr
-        Context.alarms = [min, min - 1, min - 2, min - 3, min - 4, min - 5, min - 6, min - 7, min - 8, min - 9]
+        Context.alarms = [min, min - 1, min - 2, min - 3, min - 4, min - 5,
+                          min - 6, min - 7, min - 8, min - 9]
         #Context.alarms = [120, 119, 118,117,116,115,114,113,112,111]
 
-    # following lines could just be: private_token = 'your-token'
-    prvt = configparser.ConfigParser()
-    prvt.read('private.ini', encoding='UTF8')
-    token = prvt.get('private', 'token')
-    Context.admin_id = int(prvt.get('private', 'admin_id', fallback=0))
+
+
 
     # INIT TELEGRAM BOT
     logging.info('Bot wird initialisiert...')
     updater = Updater(token=token)
     Context.updater = updater
     dispatcher = updater.dispatcher
-    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s '
-                               '- %(message)s', level=logging.INFO)
 
     # SET HANDLER
     logging.info('Funktionen werden verknüpft...')
@@ -110,6 +123,8 @@ def main():
     dispatcher.add_handler(info_handler)
     unknown_handler = MessageHandler(Filters.command, unknown)
     dispatcher.add_handler(unknown_handler)
+    config_handler = CommandHandler('config', config)
+    dispatcher.add_handler(config_handler)
 
     # READ DB and CREATE JOBS
     logging.info('Datenbank wird ausgelesen...')
@@ -193,6 +208,8 @@ def choose_alarm_text(food):
     # hardcoden zu verzichten und stattdessen dictionaries zu verwenden,
     # sodass nur die strings verändert werden müssen um zB nen tagessuppen
     # Alarm hinzuzufügen, aber nichts am Code...
+    # NOTE: ich versuch mal das umzusetzen:
+    """
     xmas = Context.strings['xmas_alarm_text'].split('\n')
     gk = Context.strings['alarm_text'].split('\n')
     default = Context.strings['default_alarm_text'].split('\n')
@@ -205,6 +222,20 @@ def choose_alarm_text(food):
     else:
         logging.debut('Keine Alarmstrings.. nehme defaults')
         return alarm_dict['default']
+    """
+    # Das wäre kürzer und sollte jetzt für beliebige essen funktionieren,
+    # die wir nur in der ini file eintragen müssen :D dafür muss der
+    # Variablen name natürliche exact dem Essen entsprechen... wenn man statt
+    #  der if bedingung einfach den get befehl nimmt, könnte man default als
+    # fallback setzen dann wärs n einzeiler aber so ists vlt. erstmal
+    # verständlicher und einfacher zu verändern.
+    if food in Context.strings_alarm:
+        logging.debug('Spezial Alarm Strings gefunden')
+        food_alarm = Context.strings_alarm[food]
+    else:
+        logging.debut('Keine Alarmstrings.. nehme defaults')
+        food_alarm = Context.strings_alarm['default']
+    return food_alarm
 
 
 def send_alarm(bot, job):
@@ -417,6 +448,7 @@ def ueber3morgen_request(bot, update):
 def make_pretty_string(essen_list,date,first_name):
     '''input list of 4 strings; output nice string'''
     date_short = datetime.datetime.strftime(date,'%d.%m')
+    # TODO: move strings to strings.ini
     pretty_string = 'Hallo {}, am {} gibts:\n'.format(first_name,date_short)+ 'Essen 1: ' + essen_list[0] + '\n \n' + 'Essen 2: ' + essen_list[1] + '\n \n' + 'Vegetarisch: ' + essen_list[2] + '\n \n' + 'Zusatzessen NW1: ' + essen_list[3]
     return  pretty_string
 
@@ -442,12 +474,19 @@ def info(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text=info_txt,
                      parse_mode='Markdown')
 
+def config(bot, update):
+    cfg_txt = 'In Arbeit'
+    bot.send_message(chat_id=update.message.chat_id, text=cfg_txt,
+                     parse_mode='Markdown')
+
 def unknown(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text=emojize(
         Context.strings['user_unknown_command_text'], use_aliases=True))
 
 # TODO: '\U0001F92F \U00002639 \U0001F9D1\U0001F3FD'
 # ...sowas in die gkconfig.ini reinballern!
-
+# TODO: funktionen sortieren und ggf. einige auslagern zB alle
+# handler-functionen in ne functions.py (dafür müssen wir aber erst diese
+# nervige Context klasse loswerden ;) )
 
 main()
