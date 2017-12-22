@@ -1,13 +1,13 @@
+from mensa_request import plusdays_date,get_food,look_for_fav_foods,time_for_alert
 import datetime
 import datetime as dt
 import logging
 import configparser
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CallbackQueryHandler, InlineQueryHandler
 from emoji import emojize
 
+# NOTE: added imports
 from models import User
 from models import session
 from mensa_request import plusdays_date, get_food
@@ -19,17 +19,15 @@ class Context:
     Klasse zum speichern statischer Variablen
     """
     strings = ''  # leere variablen als platzhalter
-    strings_alarm = ''
     updater = ''
     # TODO: In config.ini oder strings.ini? besser als hardcode
-    alarms = ''
+    alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
     #hh= 1260
     #alarms = [20+hh, 19+hh, 18+hh, 17+hh, 16+hh, 15+hh, 14+hh, 13+hh, 12+hh,
     # 11+hh]
     admin_id = 0
     s = session
     job_dict = {}
-    job_dict['abo'] = {}
 
 
 def main():
@@ -38,59 +36,49 @@ def main():
     """
 
     # SETUP LOGGING
-    # TODO: Traceback eventuell in ne extra file? sodass nur error in bot.log
-    #  steht und der error mit traceback in error.log? da die sehr lang sein
-    # können
-    logformat = '%(asctime)s -  %(levelname)s - %(message)s'
+    logformat = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(format=logformat,
-                        datefmt= '%y-%m-%d %H:%M:%S',
                         level=logging.INFO,
-                        #filename='bot.log'
-                        )
+                        filename='bot.log')
     logging.info('\n')  # leerzeile zwischen programm neustarts
-
-    # READ CONFIG
-    # NOTE ich hab das einlesen verändert, aber nach dem einlesen sollte
-    # Context.strings noch genauso wie vorher sein, nur dass die alarme
-    # nichtmehr drini sind, die sind jetzt in Context.strings_alarm
+	# READ CONFIG
     configfile = 'config.ini'
     stringsfile = 'strings.ini'
     privatefile = 'private.ini'
-    logging.info('Lese Datei: ' + configfile)
+    logging.info('Lese Datei: ')
     cfg = configparser.ConfigParser()
-    cfg.read(configfile, encoding='UTF8')
-    logging.info('Lese Datei: ' + stringsfile)
-    strg = configparser.ConfigParser()
-    strg.read(stringsfile)
-    Context.strings = dict(strg.items('strings'))
-    logging.info('Lese Datei: ' + privatefile)
-    prvt = configparser.ConfigParser()
-    prvt.read('private.ini', encoding='UTF8')
-    Context.debug = cfg.getboolean('settings', 'debug', fallback=False)
-    token = prvt.get('private', 'token')
-    Context.admin_id = int(prvt.get('private', 'admin_id', fallback=0))
+<<<<<<< HEAD
+    cfg.read('gkconfig.ini', encoding='UTF8')  # TODO: rename to congif.ini?
+    Context.strings = dict(cfg.items('strings'))  # TODO: eigene datei
+=======
+    cfg.read('gkconfig.ini', encoding='UTF8')
+    Context.strings = dict(cfg.items('strings'))
+    Context.debug = cfg.getboolean('settings','debug',fallback=False)
 
     if not Context.debug:
         Context.alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
     else:
-        # NOTE: kannste in einem satz sagen was das macht? auf wann sind die
-        # alarme im debug scharfgestellt? ich denke es ist im bereich minuten?
-        logging.warning('Achtung, Debug ist TRUE')
+        print('Achtung, Debug ist auf TRUE geschaltet')
         hh = datetime.datetime.now().hour -24 # aktuelle uhrzeit, stunden
         mm = datetime.datetime.now().minute  # minuten
         min = (11 -hh)*60+60-mm+1#stunden bis mitternacht plus morgen 12 uhr
-        Context.alarms = [min, min - 1, min - 2, min - 3, min - 4, min - 5,
-                          min - 6, min - 7, min - 8, min - 9]
+        Context.alarms = [min, min - 1, min - 2, min - 3, min - 4, min - 5, min - 6, min - 7, min - 8, min - 9]
         #Context.alarms = [120, 119, 118,117,116,115,114,113,112,111]
 
-
-
+    # following lines could just be: private_token = 'your-token'
+>>>>>>> hendriksfix
+    prvt = configparser.ConfigParser()
+    prvt.read('private.ini', encoding='UTF8')
+    token = prvt.get('private', 'token')
+    Context.admin_id = int(prvt.get('private', 'admin_id', fallback=0))
 
     # INIT TELEGRAM BOT
     logging.info('Bot wird initialisiert...')
     updater = Updater(token=token)
     Context.updater = updater
     dispatcher = updater.dispatcher
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s '
+                               '- %(message)s', level=logging.INFO)
 
     # SET HANDLER
     logging.info('Funktionen werden verknüpft...')
@@ -124,15 +112,8 @@ def main():
     dispatcher.add_handler(start_handler)
     info_handler = CommandHandler('info', info)
     dispatcher.add_handler(info_handler)
-    config_handler = CommandHandler('config', config)
-    dispatcher.add_handler(config_handler)
-
-    # OTHER HANDLERS
-    dispatcher.add_handler(CallbackQueryHandler(inline_button))
-    # Der unknown_handler muss NACH den command handlern stehen
     unknown_handler = MessageHandler(Filters.command, unknown)
     dispatcher.add_handler(unknown_handler)
-
 
     # READ DB and CREATE JOBS
     logging.info('Datenbank wird ausgelesen...')
@@ -160,7 +141,6 @@ def main():
     logging.info('Bot läuft!')
 
 
-# HANDLER FUNCTIONS
 def admin_echo_all_user(bot, update):
     """
     Sendet eine Nachricht an alle registrierten User. Der Absender muss in
@@ -175,11 +155,12 @@ def admin_echo_all_user(bot, update):
         for usr in users:
             updatetxt = Context.strings['update_txt_1']
             try:
+                # NOTE: chat_id is not key but user property
+                #bot.send_message(chat_id= int(id), text= updatetxt)
                 bot.send_message(chat_id=usr.chat_id, text=updatetxt)
             except Exception as e:
                 logging.error(e)
-                logging.error('Senden an folgenden User fehlgeschlagen:')
-                logging.error(str(usr.chat_id + '; ' + str(usr.first_name)))
+                logging.error('Senden an User fehlgeschlagen.')
 
 
 def look_for_fav_food_job(bot, job):
@@ -217,8 +198,6 @@ def choose_alarm_text(food):
     # hardcoden zu verzichten und stattdessen dictionaries zu verwenden,
     # sodass nur die strings verändert werden müssen um zB nen tagessuppen
     # Alarm hinzuzufügen, aber nichts am Code...
-    # NOTE: ich versuch mal das umzusetzen:
-    """
     xmas = Context.strings['xmas_alarm_text'].split('\n')
     gk = Context.strings['alarm_text'].split('\n')
     default = Context.strings['default_alarm_text'].split('\n')
@@ -231,20 +210,6 @@ def choose_alarm_text(food):
     else:
         logging.debut('Keine Alarmstrings.. nehme defaults')
         return alarm_dict['default']
-    """
-    # Das wäre kürzer und sollte jetzt für beliebige essen funktionieren,
-    # die wir nur in der ini file eintragen müssen :D dafür muss der
-    # Variablen name natürliche exact dem Essen entsprechen... wenn man statt
-    #  der if bedingung einfach den get befehl nimmt, könnte man default als
-    # fallback setzen dann wärs n einzeiler aber so ists vlt. erstmal
-    # verständlicher und einfacher zu verändern.
-    if food in Context.strings_alarm:
-        logging.debug('Spezial Alarm Strings gefunden')
-        food_alarm = Context.strings_alarm[food]
-    else:
-        logging.debug('Keine Alarmstrings.. nehme defaults')
-        food_alarm = Context.strings_alarm['default']
-    return food_alarm
 
 
 def send_alarm(bot, job):
@@ -270,8 +235,7 @@ def send_alarm(bot, job):
         bot.send_message(chat_id=chatid, text=message_text)
     except Exception as e:
         logging.error(e)
-        logging.error('Konnte Alarmtext nicht Senden an:')
-        logging.error(str(usr.chat_id) + '; ' + str(usr.first_name))
+        logging.error('Konnte Alarmtext nicht Senden.')
     if skip_counter+alarm_counter == 9: #10 alarme
         usr.alarm_status = False
 
@@ -302,11 +266,16 @@ def user_sets_abo(bot, update, args, job_queue):
     startet den täglichen aboservice. defaultwert ist 9 uhr ct,
     args eingabe mit HHMM
     """
+<<<<<<< HEAD
+    usr = Context.s.query(User).filter(User.chat_id
+                                       == update.message.chat_id).one_or_none()
+=======
     usr = Context.s.query(User).filter(User.chat_id==update.message.chat_id).one_or_none()
     
     # NOTE: its maybe usefull to escape this with if usr: .. else: create_user
 
     # TODO: zeitausleselogik in funktion auslagern
+>>>>>>> hendriksfix
     usr.abo = True
     if len(args) >= 2:
         try:
@@ -327,15 +296,26 @@ def user_sets_abo(bot, update, args, job_queue):
         Context.job_dict['abo'][usr.chat_id].schedule_removal() #todo
         del Context.job_dict['abo'][usr.chat_id]
     except Exception as e:
-        logging.debug(e)
-        logging.debug('Konnte für User kein abojob löschen: ')
-        logging.debug(str(usr.chat_id) + '; ' + str(usr.first_name))
-    morgen = 0
+        logging.error(e)
+        logging.error('Konnte für User kein neues Abo anlegen')
+    today_or_tomorrow = 0
     if usr.abo_time >= datetime.datetime.strptime('1400', '%H%M').time():
+<<<<<<< HEAD
+        today_or_tomorrow = 1
+    Context.job_dict['abo'] = {usr.chat_id: job_queue.run_daily(
+        abo_food_request,
+        usr.abo_time,
+        context=[today_or_tomorrow,
+                 update.message.chat_id,
+                 update.message.from_user.first_name
+                 ]
+    )}
+=======
         morgen = 1
     Context.job_dict['abo'][usr.chat_id] = job_queue.run_daily(abo_food_request,usr.abo_time,
             context=[morgen,update.message.chat_id,
                 update.message.from_user.first_name])
+>>>>>>> hendriksfix
     Context.s.commit()
     msg_txt = emojize(Context.strings['user_set_abo_text'].format(usr.abo_time),
                       use_aliases=True)
@@ -437,8 +417,7 @@ def ueber2morgen_request(bot, update):
     wanted_date = plusdays_date(3)
     essens,status=get_food(wanted_date)
     if status:
-        food_string= make_pretty_string(essens, wanted_date,
-                                        update.message.from_user.first_name)
+        food_string= make_pretty_string(essens,wanted_date,update.message.from_user.first_name)
         bot.send_message(chat_id=update.message.chat_id,text= food_string)
     else:
         bot.send_message(chat_id=update.message.chat_id, text=emojize(Context.strings['mensa_false'], use_aliases=True))
@@ -458,7 +437,6 @@ def ueber3morgen_request(bot, update):
 def make_pretty_string(essen_list,date,first_name):
     '''input list of 4 strings; output nice string'''
     date_short = datetime.datetime.strftime(date,'%d.%m')
-    # TODO: move strings to strings.ini
     pretty_string = 'Hallo {}, am {} gibts:\n'.format(first_name,date_short)+ 'Essen 1: ' + essen_list[0] + '\n \n' + 'Essen 2: ' + essen_list[1] + '\n \n' + 'Vegetarisch: ' + essen_list[2] + '\n \n' + 'Zusatzessen NW1: ' + essen_list[3]
     return  pretty_string
 
@@ -468,273 +446,26 @@ def start(bot, update):
     bot.send_message(chat_id=update.message.chat_id,text=msg_text,
                      parse_mode='Markdown')
     chat_id = update.message.chat_id
-    # NOTE: ganzen krempel mit der neuen funktion ersetzt
-    usr = get_or_create_user(update)
-
-
-def info(bot, update):
-    info_txt = emojize(Context.strings['info'], use_aliases=True)
-    bot.send_message(chat_id=update.message.chat_id, text=info_txt,
-                     parse_mode='Markdown')
-
-def config(bot, update):
-    """
-    /config - Handler
-    Diese Funktion listet die aktuellen User Einstellungen und bietet einige
-    Buttons um diese zu ändern. Noch nicht vorhandene Interaktive Buttons zeigen
-    die Hilfetexte zu den Befehlen an.
-    Die Buttons sind nicht (wie die Befehle)
-    mit Funktionen verknüpft, sondern triggern ein "CallbackQueryEvent"
-    um dies aufzufangen verwenden wir einen CallbackQueryHandler.
-    Alle Infos die für die "Reaktion" wichtig sind müssen im callback_data
-    String verpackt werden.
-    """
-    try:
-        usr = get_or_create_user(update)
-    except:
-        chat_id = update.callback_query.from_user.id
-        usr = Context.s.query(User).filter(User.chat_id==chat_id).one()
-    cfg_txt = Context.strings['config'].format(
-        str(usr.abo),
-        str(usr.abo_time),
-        str(usr.fav_food).title(),
-        'DE',
-        str(usr.mensa_id))
-    # NOTE: callbackdata contains: chat_id, widget_id/button_id,
-    keyboard = [[
-        InlineKeyboardButton('Abo', callback_data='cfg_abo'),
-        InlineKeyboardButton('Abozeit', callback_data='cfg_time'),
-        InlineKeyboardButton('Essen', callback_data='cfg_food')
-        ], [
-        InlineKeyboardButton('Sprache', callback_data='cfg_lan'),
-        InlineKeyboardButton('Mensa-ID', callback_data='cfg_mensa'),
-        InlineKeyboardButton(Context.strings['config_btn_cancel'],
-                             callback_data='cfg_cancel')
-    ]]
-    markup = InlineKeyboardMarkup(keyboard)
-    bot.send_message(chat_id=usr.chat_id, text=cfg_txt,
-                     parse_mode='Markdown', reply_markup=markup)
-
-def inline_button(bot, update):
-    """
-    Funktion ist mit InlineCallbackHandler verknüpft und wird immer aufgerufen,
-    wenn irgendein User in irgendeinem Chat irgendein Button drückt. Daher ist
-    sehr darauf zu achten, die updates (usr.id, message.id) sowie die zuordnung
-    zu bestimmten buttons (callback_data) jederzeit eindeutig zuordnen zu
-    können. Daher am besten update und user objekt direkt weitergeben.
-    Der Bot muss immer weitergegeben werden, wenn der Button interaktiv ist.
-
-    Bisherige Buttons:
-    * cfg_abo -> show_cfg_abo
-    * cfg_time -> show_cfg_time
-    """
-    data = update.callback_query.data.split(',')
-    chat_id = update.callback_query.from_user.id
-    usr = Context.s.query(User).filter(User.chat_id == chat_id).one()
-
-    # handle different buttons
-    if data[0] == 'cfg_main':
-        config(bot, update)
-    elif data[0] == 'cfg_cancel':
-        cancel_config(bot, update, usr)
-    elif data[0] == 'cfg_abo':
-        show_cfg_abo(bot, update, usr)
-    elif data[0] == 'cfg_time':
-        show_cfg_time(bot, update, usr)
-    elif data[0] == 'cfg_mensa':
-        show_cfg_mensa(bot, update, usr)
-    elif data[0] == 'cfg_food':
-        show_cfg_food(bot, update, usr)
-    elif data[0] == 'cfg_lan':
-        show_cfg_lan(bot, update, usr)
-
-
-
-def unknown(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text=emojize(
-        Context.strings['user_unknown_command_text'], use_aliases=True))
-
-
-# OTHER FUNCTIONS
-def show_cfg_abo(bot, update, usr):
-    """
-    Ändert die usr.abo wenn daten übergeben werden (vom toggle button)
-    Erestzt den Inhalt der zugehörigen Nachricht, durch abotext und buttons.
-    :param usr: User-Objekt aus models.py
-    """
-    # TODO: strings durch ini Einträge ersetzen
-    msg_id = update.callback_query.message.message_id
-    chat_id = update.callback_query.from_user.id
-    data = update.callback_query.data.split(',')
-    logging.debug(data)
-    if len(data)>1 and data[1] == '0':
-        usr.abo = False
-    elif len(data)>1 and data[1] == '1':
-        usr.abo = True
-    status_txt = 'aus'
-    toggle_txt = Context.strings['config_btn_on']
-    val = ',1'  # autsch das ist dirty
-    if usr.abo:
-        status_txt = 'an'
-        toggle_txt = Context.strings['config_btn_off']
-        val = ',0'
-
-    msg_txt = Context.strings['config_abo'].format(status_txt)
-    keyboard = [[InlineKeyboardButton(Context.strings['config_btn_back'],
-                                      callback_data='cfg_main'),
-                 InlineKeyboardButton(toggle_txt, callback_data='cfg_abo'+val),
-                 InlineKeyboardButton(Context.strings['config_btn_cancel'],
-                                      callback_data='cfg_cancel')
-                 ]]
-    markup = InlineKeyboardMarkup(keyboard)
-    bot.edit_message_text(
-        text=msg_txt,
-        chat_id=chat_id,
-        message_id=msg_id,
-        parse_mode='Markdown',
-        reply_markup=markup
-    )
-
-def show_cfg_time(bot, update, usr):
-    """
-    Erestzt den Inhalt der zugehörigen Nachricht, durch abotime und buttons.
-    :param usr: User-Objekt aus models.py
-    """
-    msg_id = update.callback_query.message.message_id
-    chat_id = update.callback_query.from_user.id
-    msg_txt = Context.strings['config_abo_time'].format(str(usr.abo_time))
-    keyboard = [[InlineKeyboardButton(Context.strings['config_btn_back'],
-                                      callback_data='cfg_main'),
-                 InlineKeyboardButton(Context.strings['config_btn_cancel'],
-                                      callback_data='cfg_cancel')
-                 ]]
-    markup = InlineKeyboardMarkup(keyboard)
-    bot.edit_message_text(
-        text=msg_txt,
-        chat_id=chat_id,
-        message_id=msg_id,
-        parse_mode='Markdown',
-        reply_markup=markup
-    )
-
-
-def show_cfg_mensa(bot, update, usr):
-    """
-    Ersetzt den Inhalt des Config-Dialogs mit der Mensa Seite. Zurzeit steht
-    dort nur ein Hinweis, dass dieser Service noch in Arbeit ist.
-    :param usr: User-Object aus models.py
-    """
-    msg_id = update.callback_query.message.message_id
-    chat_id = update.callback_query.from_user.id
-    msg_txt = Context.strings['config_mensa'].format(str(usr.mensa_id))
-    keyboard = [[InlineKeyboardButton(Context.strings['config_btn_back'],
-                                      callback_data='cfg_main'),
-                 InlineKeyboardButton(Context.strings['config_btn_cancel'],
-                                      callback_data='cfg_cancel')
-                 ]]
-    markup = InlineKeyboardMarkup(keyboard)
-    bot.edit_message_text(
-        text=msg_txt,
-        chat_id=chat_id,
-        message_id=msg_id,
-        parse_mode='Markdown',
-        reply_markup=markup)
-
-
-def show_cfg_food(bot, update, usr):
-    """
-    Ersetzt den Inhalt des Config-Dialogs mit der Lieblingsessen Seite.
-    Zurzeit steht dort nur ein Hinweis, dass dieser Service noch in Arbeit ist.
-    :param usr: User-Object aus models.py
-    """
-    print('food')
-    msg_id = update.callback_query.message.message_id
-    chat_id = update.callback_query.from_user.id
-    fav_food = str.join(', ', usr.fav_food.split(',')).title()
-    msg_txt = Context.strings['config_food'].format(str(fav_food))
-    keyboard = [[InlineKeyboardButton(Context.strings['config_btn_back'],
-                                      callback_data='cfg_main'),
-                 InlineKeyboardButton(Context.strings['config_btn_cancel'],
-                                      callback_data='cfg_cancel')
-                 ]]
-    markup = InlineKeyboardMarkup(keyboard)
-    bot.edit_message_text(
-        text=msg_txt,
-        chat_id=chat_id,
-        message_id=msg_id,
-        parse_mode='Markdown',
-        reply_markup=markup)
-
-
-def show_cfg_lan(bot, update, usr):
-    """
-        Ersetzt den Inhalt des Config-Dialogs mit den Spracheinstellungen.
-        Zurzeit steht dort nur ein Hinweis, dass dieser Service in Arbeit ist.
-        :param usr: User-Object aus models.py
-        """
-    msg_id = update.callback_query.message.message_id
-    chat_id = update.callback_query.from_user.id
-    fav_food = str.join(', ', usr.fav_food.split(',')).title()
-    msg_txt = Context.strings['config_lan']
-    keyboard = [[InlineKeyboardButton(Context.strings['config_btn_back'],
-                                      callback_data='cfg_main'),
-                 InlineKeyboardButton(Context.strings['config_btn_cancel'],
-                                      callback_data='cfg_cancel')
-                 ]]
-    markup = InlineKeyboardMarkup(keyboard)
-    bot.edit_message_text(
-        text=msg_txt,
-        chat_id=chat_id,
-        message_id=msg_id,
-        parse_mode='Markdown',
-        reply_markup=markup)
-
-
-def cancel_config(bot, update, usr):
-    """
-    Schließt den Config-Dialog, also löscht die Nachricht von der aus der
-    Button gedrückt wurde.
-    """
-    msg_id = update.callback_query.message.message_id
-    chat_id = update.callback_query.from_user.id
-    logging.debug('User schließt Settings')
-    bot.delete_message(
-        chat_id=chat_id,
-        message_id=msg_id,
-    )
-
-
-def get_or_create_user(update):
-    """
-    Diese Funktion durchsucht die Datenbank nach einem user mit passender
-    chat_id, wenn keiner gefunden wurde, wird ein neuer erstellt in die DB
-    geschrieben und übergeben.
-    :param update: Nimmt ein telegram update objekt (für id und name)
-    :return user: User-Objekt das aus der Datenbank erstellt wurde
-    """
-    chat_id = update.message.chat_id
-    usr = Context.s.query(User).filter(User.chat_id==chat_id).one_or_none()
-    if not usr:
-        # CREATE NEW USER
+    if not Context.s.query(User).filter(User.chat_id==chat_id).one_or_none():
         usr = User()
         usr.chat_id = chat_id
         usr.first_name = update.message.from_user.first_name
         Context.s.add(usr)  # add object
         Context.s.commit()  # save changes
-        logging.info('Neuen User registriert:')
-        logging.info(str(usr.chat_id) + '; ' + str(usr.first_name))
-        # NOTE: Bin mir nicht sicher, ob es einen unterschiedmacht den User
-        # aus der DB zu lesen oder direkt zu erstellen, zur sicherheit einmal
-        # neu einlesen. Außerdem verursacht das auch nen fehler wenn das
-        # erstellen nicht geklappt hat (was gewollt ist)
-        usr = Context.s.query(User).filter(User.chat_id == chat_id).one()
-    return usr
+        logging.info('Neuen User registriert.')
+        # TODO: create user funktion
 
+
+def info(bot,update):
+    info_txt = emojize(Context.strings['info'], use_aliases=True)
+    bot.send_message(chat_id=update.message.chat_id, text=info_txt,
+                     parse_mode='Markdown')
+
+def unknown(bot, update):
+    bot.send_message(chat_id=update.message.chat_id, text=emojize(Context.strings['user_unknown_command_text'],use_aliases=True))
 
 # TODO: '\U0001F92F \U00002639 \U0001F9D1\U0001F3FD'
 # ...sowas in die gkconfig.ini reinballern!
-# TODO: funktionen sortieren und ggf. einige auslagern zB alle
-# handler-functionen in ne functions.py (dafür müssen wir aber erst diese
-# nervige Context klasse loswerden ;) )
+
 
 main()
