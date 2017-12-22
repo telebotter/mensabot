@@ -73,8 +73,7 @@ def main():
     if not Context.debug:
         Context.alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
     else:
-        # NOTE: kannste in einem satz sagen was das macht? auf wann sind die
-        # alarme im debug scharfgestellt? ich denke es ist im bereich minuten?
+        #stellt den gk alarm testweise scharf auf die nächsten 10 minuten, dabei wird der alarm getriggert für ein essesn das bei fav_food eingetragen ist und es morgen tatsächlich gibt
         logging.warning('Achtung, Debug ist TRUE')
         hh = datetime.datetime.now().hour -24 # aktuelle uhrzeit, stunden
         mm = datetime.datetime.now().minute  # minuten
