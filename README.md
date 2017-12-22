@@ -7,6 +7,17 @@ der openmensa.org Datenbank.
 
 Mehr Infos auf der [Projekt-Website](https://telebotter.github.io/mensabot)...
 
+## Patchnotes:
+
 Für Version 0.2 geplant:
 * Logging von Infos und Fehlern in Datei
 * /config menü für den Nutzer
+
+
+v0.2
+* logging statt print
+* /config dialog
+* website installiert
+
+v0.1
+* steht im release
