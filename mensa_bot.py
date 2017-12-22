@@ -61,7 +61,7 @@ def main():
     cfg.read(configfile, encoding='UTF8')
     logging.info('Lese Datei: ' + stringsfile)
     strg = configparser.ConfigParser()
-    strg.read(stringsfile)
+    strg.read(stringsfile, encoding='UTF8')
     Context.strings = dict(strg.items('strings'))
     logging.info('Lese Datei: ' + privatefile)
     prvt = configparser.ConfigParser()
@@ -414,8 +414,8 @@ def morgen_request(bot, update):
     wanted_date = plusdays_date(1)
     essens,status=get_food(wanted_date)
     if status:
-        food_string= make_pretty_string(essens,wanted_date,update.message.from_user.first_name)
-        bot.send_message(chat_id=update.message.chat_id,text= food_string)
+        food_string= make_pretty_string(essens, wanted_date, update.message.from_user.first_name)
+        bot.send_message(chat_id=update.message.chat_id, text= food_string)
     else:
         bot.send_message(chat_id=update.message.chat_id, text=emojize(Context.strings['mensa_false'], use_aliases=True))
 
