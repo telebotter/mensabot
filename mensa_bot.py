@@ -29,7 +29,8 @@ class Context:
     admin_id = 0
     s = session
     job_dict = {}
-    job_dict['abo'] = {}
+    # job_dict['abo'] = {}  # NOTE: dachte dashier würde dein bug fixen
+    # scheinbar wirds wonaders zurück überschrieben
 
 
 def main():
@@ -117,7 +118,7 @@ def main():
                                                   ueber3morgen_request)
     dispatcher.add_handler(ueber3morgen_request_handler)
 
-    admin_echo_all_user_handler = CommandHandler('CrypT1cC0MmanI)!',
+    admin_echo_all_user_handler = CommandHandler('CrypT1cC0MmanI)!',  # LOL
                                                  admin_echo_all_user)
     dispatcher.add_handler(admin_echo_all_user_handler)
     start_handler = CommandHandler('start', start)
@@ -138,18 +139,25 @@ def main():
     logging.info('Datenbank wird ausgelesen...')
     Context.s = session
     logging.info('Userjobs werden erstellt...')
+    # abo muss nat. for der forschleife erstellt werden, das war bst. der bug
+    Context.job_dict['abo'] = {}
     for usr in Context.s.query(User).all():  # TODO: auslagern in funktion
         # TODO: time
         if usr.abo:
             morgen = 0
             if usr.abo_time.hour >= 14:
                 morgen = 1
-            job_abo = updater.job_queue.run_daily(abo_food_request,
+            usr_abo_job = updater.job_queue.run_daily(abo_food_request,
                                                   usr.abo_time,
                                                   context=[morgen,
                                                            usr.chat_id,
                                                            usr.first_name])
-            Context.job_dict['abo'] = {usr.chat_id: job_abo}
+            # NOTE: hier wurde abo jedsm. überschrieben muss vor die schleife
+            #Context.job_dict['abo'] = {usr.chat_id: usr_job}
+            # Unst stattdessen nur der eintrag für den user hinzugefügt werden.
+            Context.job_dict['abo'][usr.chat_id] = usr_abo_job
+
+
     Context.s.commit()  # TODO: need?
     logging.info('Stündlicher Alarmcheck wird erstellt...')
     job_alarm_check = updater.job_queue.run_repeating(look_for_fav_food_job,
