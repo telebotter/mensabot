@@ -18,6 +18,7 @@ class Context:
     """
     Klasse zum speichern statischer Variablen
     """
+    commands = ''
     strings = ''  # leere variablen als platzhalter
     strings_alarm = ''
     updater = ''
@@ -29,7 +30,8 @@ class Context:
     admin_id = 0
     s = session
     job_dict = {}
-    job_dict['abo'] = {}
+    # job_dict['abo'] = {}  # NOTE: dachte dashier würde dein bug fixen
+    # scheinbar wirds wonaders zurück überschrieben
 
 
 def main():
@@ -56,6 +58,7 @@ def main():
     configfile = 'config.ini'
     stringsfile = 'strings.ini'
     privatefile = 'private.ini'
+    commandfile = 'commands.ini'
     logging.info('Lese Datei: ' + configfile)
     cfg = configparser.ConfigParser()
     cfg.read(configfile, encoding='UTF8')
@@ -65,10 +68,14 @@ def main():
     Context.strings = dict(strg.items('strings'))
     logging.info('Lese Datei: ' + privatefile)
     prvt = configparser.ConfigParser()
-    prvt.read('private.ini', encoding='UTF8')
+    prvt.read(privatefile, encoding='UTF8')
     Context.debug = cfg.getboolean('settings', 'debug', fallback=False)
     token = prvt.get('private', 'token')
     Context.admin_id = int(prvt.get('private', 'admin_id', fallback=0))
+    logging.info('Lese Datei: ' + commandfile)
+    cmd = configparser.ConfigParser()
+    cmd.read(commandfile, encoding='UTF8')
+    Context.commands = cmd
 
     if not Context.debug:
         Context.alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
@@ -116,7 +123,7 @@ def main():
                                                   ueber3morgen_request)
     dispatcher.add_handler(ueber3morgen_request_handler)
 
-    admin_echo_all_user_handler = CommandHandler('CrypT1cC0MmanI)!',
+    admin_echo_all_user_handler = CommandHandler('CrypT1cC0MmanI)!',  # LOL
                                                  admin_echo_all_user)
     dispatcher.add_handler(admin_echo_all_user_handler)
     start_handler = CommandHandler('start', start)
@@ -125,6 +132,20 @@ def main():
     dispatcher.add_handler(info_handler)
     config_handler = CommandHandler('config', config)
     dispatcher.add_handler(config_handler)
+    # /favorite  - TODO: könnten das mit alias erstmal so machen?
+    #dispatcher.add_handler(CommandHandler('favorite', favfood))
+    #dispatcher.add_handler(CommandHandler('favourite', favfood))
+    #dispatcher.add_handler(CommandHandler('favfood', favfood))
+    #dispatcher.add_handler(CommandHandler('favfood', favfood))
+    # NOTE: oder direkt so... gefällt mir besser :D erwachen der ini files
+    favfood_alias = Context.commands.get('favfood', 'alias', fallback='favfood')
+    favfood_alias = favfood_alias.split(',')
+    for alias in favfood_alias:
+        dispatcher.add_handler(CommandHandler(alias, favfood, pass_args=True))
+    delfav_alias = Context.commands.get(
+        'delfavfood', 'alias', fallback='delfavfood').split(',')
+    for alias in delfav_alias:
+        dispatcher.add_handler(CommandHandler(alias, delfavfood, pass_args=True))
 
     # OTHER HANDLERS
     dispatcher.add_handler(CallbackQueryHandler(inline_button))
@@ -137,18 +158,25 @@ def main():
     logging.info('Datenbank wird ausgelesen...')
     Context.s = session
     logging.info('Userjobs werden erstellt...')
+    # abo muss nat. for der forschleife erstellt werden, das war bst. der bug
+    Context.job_dict['abo'] = {}
     for usr in Context.s.query(User).all():  # TODO: auslagern in funktion
         # TODO: time
         if usr.abo:
             morgen = 0
             if usr.abo_time.hour >= 14:
                 morgen = 1
-            job_abo = updater.job_queue.run_daily(abo_food_request,
+            usr_abo_job = updater.job_queue.run_daily(abo_food_request,
                                                   usr.abo_time,
                                                   context=[morgen,
                                                            usr.chat_id,
                                                            usr.first_name])
-            Context.job_dict['abo'] = {usr.chat_id: job_abo}
+            # NOTE: hier wurde abo jedsm. überschrieben muss vor die schleife
+            #Context.job_dict['abo'] = {usr.chat_id: usr_job}
+            # Unst stattdessen nur der eintrag für den user hinzugefügt werden.
+            Context.job_dict['abo'][usr.chat_id] = usr_abo_job
+
+
     Context.s.commit()  # TODO: need?
     logging.info('Stündlicher Alarmcheck wird erstellt...')
     job_alarm_check = updater.job_queue.run_repeating(look_for_fav_food_job,
@@ -203,6 +231,7 @@ def look_for_fav_food_job(bot, job):
                     fav_food_list.append(alarmjob_tmp)  # TODO: rename?
                     alarm_counter += 1
                 Context.job_dict['fav_foods'] = {usr.chat_id: fav_food_list}
+
 
 def choose_alarm_text(food):
     """
@@ -454,12 +483,6 @@ def ueber3morgen_request(bot, update):
         bot.send_message(chat_id=update.message.chat_id, text=emojize(Context.strings['mensa_false'], use_aliases=True))
 
 
-def make_pretty_string(essen_list,date,first_name):
-    '''input list of 4 strings; output nice string'''
-    date_short = datetime.datetime.strftime(date,'%d.%m')
-    # TODO: move strings to strings.ini
-    pretty_string = 'Hallo {}, am {} gibts:\n'.format(first_name,date_short)+ 'Essen 1: ' + essen_list[0] + '\n \n' + 'Essen 2: ' + essen_list[1] + '\n \n' + 'Vegetarisch: ' + essen_list[2] + '\n \n' + 'Zusatzessen NW1: ' + essen_list[3]
-    return  pretty_string
 
 
 def start(bot, update):
@@ -475,6 +498,50 @@ def info(bot, update):
     info_txt = emojize(Context.strings['info'], use_aliases=True)
     bot.send_message(chat_id=update.message.chat_id, text=info_txt,
                      parse_mode='Markdown')
+
+
+def favfood(bot, update, args):
+    """
+    /favfood - Handler
+    Springt direkt zum food widget aus den settings, wenn keine parameter dran
+    sind. Parameter werden direkt an die fav_food liste angehängt.
+    """
+    usr = get_or_create_user(update)
+    logging.debug('User bearbeitet sein Lieblingsessen:')
+    logging.debug(str(usr.chat_id) + ', ' + str(usr.first_name))
+    if len(args) == 0:
+        show_cfg_food(bot, update, usr)
+        return
+    # argumente an string anhängen.....
+    favs = usr.fav_food.split(',')
+    for arg in args:
+        favs.append(arg)
+    usr.fav_food = str.join(',', favs)  # TODO: führende , verhindern
+    Context.s.add(usr)  # muss ausgeführt werden, damits geschrieben wird
+    Context.s.commit()
+    msg_txt = Context.strings['favfood_response'].format(usr.fav_food)
+    bot.send_message(text=msg_txt, chat_id=usr.chat_id, parse_mode='Markdown')
+
+
+def delfavfood(bot, update, args):
+    """
+    /delfavfood - Handler
+    Ohne Argumente öffnet er den Config-Essen-Löschen-Dialog. Ansonsten werden
+    die Argumente aus der user.fav_food "liste" gelöscht
+    """
+    usr = get_or_create_user(update)
+    logging.debug('User löscht ein Lieblingsessen:')
+    logging.debug(str(usr.chat_id) + ', ' + str(usr.first_name))
+    if len(args) == 0:
+        show_cfg_food_del(bot, update, usr)
+        return
+    # argumente aus string löschen..
+    for arg in args:
+        del_fav_food(usr, arg)  # speichert auch user in db
+    msg_txt = Context.strings['delfavfood_response'].format(str(args),
+                                                            usr.fav_food)
+    bot.send_message(text=msg_txt, chat_id=usr.chat_id, parse_mode='Markdown')
+
 
 def config(bot, update):
     """
@@ -511,8 +578,17 @@ def config(bot, update):
                              callback_data='cfg_cancel')
     ]]
     markup = InlineKeyboardMarkup(keyboard)
-    bot.send_message(chat_id=usr.chat_id, text=cfg_txt,
-                     parse_mode='Markdown', reply_markup=markup)
+    try:  # to get a messg_id
+        msg_id = update.callback_query.message.message_id
+        bot.edit_message_text(
+            text=cfg_txt,
+            chat_id=usr.chat_id,
+            message_id=msg_id,
+            parse_mode='Markdown',
+            reply_markup=markup)
+    except:  # create new
+        bot.send_message(chat_id=usr.chat_id, text=cfg_txt,
+                         parse_mode='Markdown', reply_markup=markup)
 
 def inline_button(bot, update):
     """
@@ -533,7 +609,7 @@ def inline_button(bot, update):
 
     # handle different buttons
     if data[0] == 'cfg_main':
-        config(bot, update)
+        config(bot, update, usr)
     elif data[0] == 'cfg_cancel':
         cancel_config(bot, update, usr)
     elif data[0] == 'cfg_abo':
@@ -546,6 +622,8 @@ def inline_button(bot, update):
         show_cfg_food(bot, update, usr)
     elif data[0] == 'cfg_lan':
         show_cfg_lan(bot, update, usr)
+    elif data[0] == 'cfg_delfood':
+        show_cfg_food_del(bot, update, usr)
 
 
 
@@ -555,6 +633,14 @@ def unknown(bot, update):
 
 
 # OTHER FUNCTIONS
+def make_pretty_string(essen_list,date,first_name):
+    '''input list of 4 strings; output nice string'''
+    date_short = datetime.datetime.strftime(date,'%d.%m')
+    # TODO: move strings to strings.ini und diese überlange zeile splitten...
+    pretty_string = 'Hallo {}, am {} gibts:\n'.format(first_name,date_short)+ 'Essen 1: ' + essen_list[0] + '\n \n' + 'Essen 2: ' + essen_list[1] + '\n \n' + 'Vegetarisch: ' + essen_list[2] + '\n \n' + 'Zusatzessen NW1: ' + essen_list[3]
+    return  pretty_string
+
+
 def show_cfg_abo(bot, update, usr):
     """
     Ändert die usr.abo wenn daten übergeben werden (vom toggle button)
@@ -646,23 +732,67 @@ def show_cfg_food(bot, update, usr):
     Zurzeit steht dort nur ein Hinweis, dass dieser Service noch in Arbeit ist.
     :param usr: User-Object aus models.py
     """
-    print('food')
-    msg_id = update.callback_query.message.message_id
-    chat_id = update.callback_query.from_user.id
     fav_food = str.join(', ', usr.fav_food.split(',')).title()
     msg_txt = Context.strings['config_food'].format(str(fav_food))
     keyboard = [[InlineKeyboardButton(Context.strings['config_btn_back'],
                                       callback_data='cfg_main'),
+                 InlineKeyboardButton(Context.strings['config_btn_delfood'],
+                                      callback_data='cfg_delfood'),
                  InlineKeyboardButton(Context.strings['config_btn_cancel'],
                                       callback_data='cfg_cancel')
                  ]]
+
     markup = InlineKeyboardMarkup(keyboard)
-    bot.edit_message_text(
-        text=msg_txt,
-        chat_id=chat_id,
-        message_id=msg_id,
-        parse_mode='Markdown',
-        reply_markup=markup)
+    try:  # to find related message
+        msg_id = update.callback_query.message.message_id
+        bot.edit_message_text(
+            text=msg_txt,
+            chat_id=usr.chat_id,
+            message_id=msg_id,
+            parse_mode='Markdown',
+            reply_markup=markup)
+    except:  # create new message
+        logging.info('cfg_food Dialog aufgerufen ohne message_id')
+        bot.send_message(
+            chat_id=usr.chat_id,
+            text=msg_txt,
+            parse_mode='Markdown',
+            reply_markup=markup)
+
+
+def show_cfg_food_del(bot, update, usr):
+    """
+    Zeigt eine Buttonliste im Config-Dialog. Die Buttons entsprechen den
+    eingetragenen Essen. Um ein essen zu löschen wird der string als data[1]
+    übergeben und dann vom button handler an die delete funktion übergeben.
+    """
+    data = update.callback_query.data.split(',')
+    if len(data) > 1:
+        del_fav_food(usr, data[1])
+
+    msg_txt = Context.strings['config_food_del']
+    keyboard = []
+    for fav in usr.fav_food.split(','):
+        keyboard.append([InlineKeyboardButton(
+            fav, callback_data='cfg_delfood,'+fav)])
+    markup = InlineKeyboardMarkup(keyboard)
+    try:  # to find related message
+        msg_id = update.callback_query.message.message_id
+        bot.edit_message_text(
+            text=msg_txt,
+            chat_id=usr.chat_id,
+            message_id=msg_id,
+            parse_mode='Markdown',
+            reply_markup=markup)
+    except:  # create new message
+        logging.debug('cfg_food_del Dialog aufgerufen ohne message_id')
+        bot.send_message(
+            chat_id=usr.chat_id,
+            text=msg_txt,
+            parse_mode='Markdown',
+            reply_markup=markup)
+
+
 
 
 def show_cfg_lan(bot, update, usr):
@@ -711,7 +841,10 @@ def get_or_create_user(update):
     :param update: Nimmt ein telegram update objekt (für id und name)
     :return user: User-Objekt das aus der Datenbank erstellt wurde
     """
-    chat_id = update.message.chat_id
+    try:
+        chat_id = update.message.chat_id
+    except:
+        chat_id = update.callback_query.from_user.id
     usr = Context.s.query(User).filter(User.chat_id==chat_id).one_or_none()
     if not usr:
         # CREATE NEW USER
@@ -728,6 +861,20 @@ def get_or_create_user(update):
         # erstellen nicht geklappt hat (was gewollt ist)
         usr = Context.s.query(User).filter(User.chat_id == chat_id).one()
     return usr
+
+
+def del_fav_food(usr, food):
+    """
+    Removes matching food string from the "list" usr.fav_food.
+    :param usr: User-Object from models.py
+    :param food: String of food to be removed from list
+    """
+    favs = usr.fav_food.split(',')
+    new_favs = [x for x in favs if food not in x]
+    new_favs = str.join(',', new_favs)
+    usr.fav_food = new_favs
+    Context.s.add(usr)
+    Context.s.commit()
 
 
 # TODO: '\U0001F92F \U00002639 \U0001F9D1\U0001F3FD'
