@@ -132,12 +132,7 @@ def main():
     dispatcher.add_handler(info_handler)
     config_handler = CommandHandler('config', config)
     dispatcher.add_handler(config_handler)
-    # /favorite  - TODO: könnten das mit alias erstmal so machen?
-    #dispatcher.add_handler(CommandHandler('favorite', favfood))
-    #dispatcher.add_handler(CommandHandler('favourite', favfood))
-    #dispatcher.add_handler(CommandHandler('favfood', favfood))
-    #dispatcher.add_handler(CommandHandler('favfood', favfood))
-    # NOTE: oder direkt so... gefällt mir besser :D erwachen der ini files
+
     favfood_alias = Context.commands.get('favfood', 'alias', fallback='favfood')
     favfood_alias = favfood_alias.split(',')
     for alias in favfood_alias:
@@ -171,9 +166,6 @@ def main():
                                                   context=[morgen,
                                                            usr.chat_id,
                                                            usr.first_name])
-            # NOTE: hier wurde abo jedsm. überschrieben muss vor die schleife
-            #Context.job_dict['abo'] = {usr.chat_id: usr_job}
-            # Unst stattdessen nur der eintrag für den user hinzugefügt werden.
             Context.job_dict['abo'][usr.chat_id] = usr_abo_job
 
 
@@ -240,32 +232,6 @@ def choose_alarm_text(food):
     :param food: <String>
     """
     logging.debug('Versuche Alarmstrings zu Essen zu finden.')
-    # TODO: das war nicht ganz was ich meinte aber das fix ich beim erstellen
-    #  von strings.ini im nächsten issue.. Meine Idee war gerade aufs
-    # hardcoden zu verzichten und stattdessen dictionaries zu verwenden,
-    # sodass nur die strings verändert werden müssen um zB nen tagessuppen
-    # Alarm hinzuzufügen, aber nichts am Code...
-    # NOTE: ich versuch mal das umzusetzen:
-    """
-    xmas = Context.strings['xmas_alarm_text'].split('\n')
-    gk = Context.strings['alarm_text'].split('\n')
-    default = Context.strings['default_alarm_text'].split('\n')
-    alarm_dict = {'weihnachtsessen':xmas,
-                  'grünkohl':gk,
-                  'default':default}
-    if food in alarm_dict:
-        logging.debug('Spezial Alarm Strings gefunden')
-        return alarm_dict[food]
-    else:
-        logging.debut('Keine Alarmstrings.. nehme defaults')
-        return alarm_dict['default']
-    """
-    # Das wäre kürzer und sollte jetzt für beliebige essen funktionieren,
-    # die wir nur in der ini file eintragen müssen :D dafür muss der
-    # Variablen name natürliche exact dem Essen entsprechen... wenn man statt
-    #  der if bedingung einfach den get befehl nimmt, könnte man default als
-    # fallback setzen dann wärs n einzeiler aber so ists vlt. erstmal
-    # verständlicher und einfacher zu verändern.
     if food in Context.strings_alarm:
         logging.debug('Spezial Alarm Strings gefunden')
         food_alarm = Context.strings_alarm[food]
@@ -318,8 +284,12 @@ def user_stops_abo(bot, update):
         bot.send_message(chat_id=usr.chat_id, text=msg_txt)
         return
     usr.abo = False
-    Context.job_dict['abo'][usr.chat_id].schedule_removal()
-    del Context.job_dict['abo'][usr.chat_id]
+    try:
+        Context.job_dict['abo'][usr.chat_id].schedule_removal()
+        del Context.job_dict['abo'][usr.chat_id]
+    except Exception as e:
+        logging.warning('User versucht abo zu stoppen das nicht existiert')
+        logging.warning(usr.chat_id+'; '+usr.first_name)
     bot.send_message(chat_id=update.message.chat_id, text = msg_txt)
     Context.s.commit()
     logging.info('User hat den Aboservice gekündigt')
@@ -560,6 +530,7 @@ def config(bot, update):
     except:
         chat_id = update.callback_query.from_user.id
         usr = Context.s.query(User).filter(User.chat_id==chat_id).one()
+        #todo. try except ist in get create eingebaut
     cfg_txt = Context.strings['config'].format(
         str(usr.abo),
         str(usr.abo_time),
@@ -609,7 +580,7 @@ def inline_button(bot, update):
 
     # handle different buttons
     if data[0] == 'cfg_main':
-        config(bot, update, usr)
+        config(bot, update)
     elif data[0] == 'cfg_cancel':
         cancel_config(bot, update, usr)
     elif data[0] == 'cfg_abo':
@@ -624,6 +595,9 @@ def inline_button(bot, update):
         show_cfg_lan(bot, update, usr)
     elif data[0] == 'cfg_delfood':
         show_cfg_food_del(bot, update, usr)
+    else:
+        logging.warning('unbekannter button gedrückt')
+        logging.warning(usr.chat_id,usr.first_name)
 
 
 
@@ -847,19 +821,26 @@ def get_or_create_user(update):
         chat_id = update.callback_query.from_user.id
     usr = Context.s.query(User).filter(User.chat_id==chat_id).one_or_none()
     if not usr:
-        # CREATE NEW USER
-        usr = User()
-        usr.chat_id = chat_id
-        usr.first_name = update.message.from_user.first_name
-        Context.s.add(usr)  # add object
-        Context.s.commit()  # save changes
-        logging.info('Neuen User registriert:')
-        logging.info(str(usr.chat_id) + '; ' + str(usr.first_name))
-        # NOTE: Bin mir nicht sicher, ob es einen unterschiedmacht den User
-        # aus der DB zu lesen oder direkt zu erstellen, zur sicherheit einmal
-        # neu einlesen. Außerdem verursacht das auch nen fehler wenn das
-        # erstellen nicht geklappt hat (was gewollt ist)
-        usr = Context.s.query(User).filter(User.chat_id == chat_id).one()
+        try:
+            # CREATE NEW USER
+            usr = User()
+            usr.chat_id = chat_id
+            # TODO: check obs auch mit inline button geht...
+            usr.first_name = update.message.from_user.first_name
+
+            Context.s.add(usr)  # add object
+            Context.s.commit()  # save changes
+            logging.info('Neuen User registriert:')
+            logging.info(str(usr.chat_id) + '; ' + str(usr.first_name))
+            # NOTE: Bin mir nicht sicher, ob es einen unterschiedmacht den User
+            # aus der DB zu lesen oder direkt zu erstellen, zur sicherheit einmal
+            # neu einlesen. Außerdem verursacht das auch nen fehler wenn das
+            # erstellen nicht geklappt hat (was gewollt ist)
+            usr = Context.s.query(User).filter(User.chat_id == chat_id).one()
+        except Exception as e:
+            logging.error('User hat versucht weiter mit den Buttons zu '
+                          'arbeiten obwohl er nicht in db ist:')
+            logging.error(usr.chat_id,usr.first_name)
     return usr
 
 
