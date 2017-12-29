@@ -13,6 +13,8 @@ from models import session
 from mensa_request import plusdays_date, get_food
 from mensa_request import look_for_fav_foods, time_for_alert
 
+import functions as f
+
 
 class Context:
     """
@@ -141,6 +143,10 @@ def main():
         'delfavfood', 'alias', fallback='delfavfood').split(',')
     for alias in delfav_alias:
         dispatcher.add_handler(CommandHandler(alias, delfavfood, pass_args=True))
+    issue_alias = Context.commands.get(
+        'issue', 'alias', fallback='issue').split(',')
+    for alias in issue_alias:
+        dispatcher.add_handler(CommandHandler(alias, issue, pass_args=True))
 
     # OTHER HANDLERS
     dispatcher.add_handler(CallbackQueryHandler(inline_button))
@@ -561,6 +567,29 @@ def config(bot, update):
         bot.send_message(chat_id=usr.chat_id, text=cfg_txt,
                          parse_mode='Markdown', reply_markup=markup)
 
+def issue(bot, update, args):
+    """
+    Funktion erstellt autmatisch ein Issue aus einer nicht leeren Usereingabe.
+    Vorerst werden Alle parameter angehängt.
+    """
+    # TODO: Soll auch mit conversation handler funktionieren ohne argumente
+    # TODO: strings in strings.ini txt erklärung ggf. auch in commands.ini
+    usr = get_or_create_user(update)
+    if len(args) == 0:
+        txt = 'Schreibe dein anliegen direkt hinter den Befehl. Zum Beispiel: ``` /issue Das man diese blöde Nachricht bekommt ' \
+              'wenn man keine Argumente eingibt nervt.```'
+        bot.send_message(chat_id=usr.chat_id, text=txt, parse_mode='Markdown')
+        return
+    title = 'MensaBot: '
+    title += usr.first_name
+    body = ' '.join(args)
+    f.createIssue(title, body)
+    url = 'https://github.com/telebotter/mensabot/issues'
+    txt = 'Dein Anliegen wird uns hoffentlich schnell erreichen. Den status kannst du hier verfolgen: \n '
+    txt += url
+    bot.send_message(chat_id=usr.chat_id, text=txt, parse_mode='Markdown')
+
+
 def inline_button(bot, update):
     """
     Funktion ist mit InlineCallbackHandler verknüpft und wird immer aufgerufen,
@@ -856,6 +885,7 @@ def del_fav_food(usr, food):
     usr.fav_food = new_favs
     Context.s.add(usr)
     Context.s.commit()
+
 
 
 # TODO: '\U0001F92F \U00002639 \U0001F9D1\U0001F3FD'
