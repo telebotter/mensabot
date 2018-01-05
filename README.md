@@ -1,4 +1,4 @@
-# mein_mensa_bot v0.2
+# @mein_mensa_bot
 
 Dieser Telegrambot informiert seine Nutzer, über das aktuelle Mensaessen.
 Bei bestimmten Events wie z.B. Grünkohl oder Weihnachtsessen gibt er den Nutzern
