@@ -9,7 +9,7 @@ Der Bot schreibt die user daten in eine Servereigene Datenbank, wo über customi
 
 
 
-Mehr Infos auf der [Projekt-Website](https://telebotter.github.io/mensabot)...
+Mehr Infos auf der [Projekt-Website](https://telebotter.github.io/mensabot), oder auf der [Funktionenseite](https://telebotter.github.io/mensabot/functions)
 
 
 > Erfinder: Lukas Ruhe & Hendrik Freiheit
