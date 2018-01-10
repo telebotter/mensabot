@@ -23,7 +23,7 @@ def datetime_plus_days(date,plusdays):
     return dateplusdays
 
 
-def get_food(date,canteen_1=167,canteen_2=201):
+def get_food(date,canteen_1=734,canteen_2=732):
     wanted_date = datetime.datetime.strftime(date, '%Y-%m-%d')
     URL='http://openmensa.org/api/v2/canteens/{}/days/{}/meals'.format(canteen_1, wanted_date)
     URLnw1='http://openmensa.org/api/v2/canteens/{}/days/{}/meals'.format(canteen_2, wanted_date)
@@ -54,9 +54,10 @@ def look_for_fav_foods(fav_foods):
         date = plusdays_date(ii)
         essens, mensastatus=get_food(date) #durchsuche essen1 innerhalb der nächsten 6 tage nach grünkohl
         essen_1 = essens[0]
+        essen_z = essens[3]
         if mensastatus:
             for food in fav_foods:
-                if food.lower() in essen_1.lower():#todo:findet nur ganze wörter
+                if food.lower() in essen_1.lower() or food.lower() in essen_z.lower():#todo:findet nur ganze wörter
                     today = datetime.datetime.now()
                     event_date = datetime_plus_days(today,ii)
                     wanted_date = datetime.datetime.strftime(event_date, '%Y-%m-%d')

@@ -68,6 +68,7 @@ def main():
     strg = configparser.ConfigParser()
     strg.read(stringsfile, encoding='UTF8')
     Context.strings = dict(strg.items('strings'))
+    Context.strings_alarm = dict(strg.items('alarm'))
     logging.info('Lese Datei: ' + privatefile)
     prvt = configparser.ConfigParser()
     prvt.read(privatefile, encoding='UTF8')
@@ -83,10 +84,12 @@ def main():
         Context.alarms = [100, 48, 24, 18, 15, 6, 3, 2, 1, 0]
     else:
         #stellt den gk alarm testweise scharf auf die nächsten 10 minuten, dabei wird der alarm getriggert für ein essesn das bei fav_food eingetragen ist und es morgen tatsächlich gibt
+        # startet beim ersten alarm
         logging.warning('Achtung, Debug ist TRUE')
         hh = datetime.datetime.now().hour -24 # aktuelle uhrzeit, stunden
         mm = datetime.datetime.now().minute  # minuten
-        min = (11 -hh)*60+60-mm+1#stunden bis mitternacht plus morgen 12 uhr
+        min = (11 -hh)*60+60-mm+1-2#stunden bis mitternacht plus morgen 12 uhr
+        #min=1289 #manuelle eingabe/ minuten bis zum fav_food event
         Context.alarms = [min, min - 1, min - 2, min - 3, min - 4, min - 5,
                           min - 6, min - 7, min - 8, min - 9]
         #Context.alarms = [120, 119, 118,117,116,115,114,113,112,111]
@@ -175,9 +178,9 @@ def main():
             Context.job_dict['abo'][usr.chat_id] = usr_abo_job
 
 
-    Context.s.commit()  # TODO: need?
+    #Context.s.commit()  # TODO: need?
     logging.info('Stündlicher Alarmcheck wird erstellt...')
-    job_alarm_check = updater.job_queue.run_repeating(look_for_fav_food_job,
+    job_alarm_check = updater.job_queue.run_repeating(weiterleit_job,
                                                       interval=360, first=0)
 
     # START TELEGRAM BOT
@@ -185,7 +188,12 @@ def main():
     logging.info('Bot läuft!')
 
 
-# HANDLER FUNCTIONS
+def weiterleit_job(bot,job):
+    try:
+        look_for_fav_food_job(bot,job)
+    except:
+        logging.warning('look_for_fav_food_job hat nicht geklappt')
+
 def admin_echo_all_user(bot, update):
     """
     Sendet eine Nachricht an alle registrierten User. Der Absender muss in
@@ -212,12 +220,14 @@ def look_for_fav_food_job(bot, job):
     Durchsucht die Lieblingsessen und setzt Alarme für die einzelnen User
     """
     for usr in Context.s.query(User).all():
+        if usr.fav_food == []:# todo, wenn kein essen eingetragen ist gibts oft errors
+            print('leer')
         fav_foods = usr.fav_food.split(',')  # TODO: development change <- ??
         td, food = look_for_fav_foods(fav_foods)
 
         if td:
             chatid = usr.chat_id  # TODO: usr wird eh übergeben...
-            tds, skip_counter = time_for_alert(td, Context.alarms)
+            tds, skip_counter = time_for_alert(td, Context.alarms, Context.debug)
             if not usr.alarm_status:  # NOTE: if not ist schöner als == False
                 usr.alarm_status = True
                 fav_food_list = []
@@ -256,15 +266,16 @@ def send_alarm(bot, job):
     # TODO: warum übergibst du ne liste und den index, statt direkt den
     # string zu übergeben? also wenn ichs richtig sehe brauch nur usr + str
     # im context stehen
-    texts = choose_alarm_text(job.context[4])
+    texts = choose_alarm_text(job.context[4].lower()).split('\n')
     skip_counter = job.context[1]
     alarm_counter = job.context[0]
     usr = job.context[3]
     chatid = job.context[2]  # todo: wird nicht gebraucht chatid = usr.chat_id
-    # TODO: übertrieben lange zeile zerhacken
-    message_text = emojize(texts[skip_counter+alarm_counter],
-                           use_aliases=True).format(Context.alarms[skip_counter
-                                                            + alarm_counter])
+    try:
+        message_text = emojize(texts[skip_counter+alarm_counter],
+                           use_aliases=True).format(Context.alarms[skip_counter + alarm_counter])
+    except:
+        return
 
     try:
         bot.send_message(chat_id=chatid, text=message_text)
@@ -489,10 +500,15 @@ def favfood(bot, update, args):
         show_cfg_food(bot, update, usr)
         return
     # argumente an string anhängen.....
-    favs = usr.fav_food.split(',')
+    try:
+        favs = usr.fav_food.split(',')
+    except Exception:
+        favs = [] #falls kein eintrag vorhanden ist
     for arg in args:
         favs.append(arg)
-    usr.fav_food = str.join(',', favs)  # TODO: führende , verhindern
+    usr.fav_food = str.join(',', favs)
+    if usr.fav_food[0] == ',': #führende , verhindern
+        usr.fav_food = usr.fav_food[1:]
     Context.s.add(usr)  # muss ausgeführt werden, damits geschrieben wird
     Context.s.commit()
     msg_txt = Context.strings['favfood_response'].format(usr.fav_food)
@@ -517,6 +533,8 @@ def delfavfood(bot, update, args):
     msg_txt = Context.strings['delfavfood_response'].format(str(args),
                                                             usr.fav_food)
     bot.send_message(text=msg_txt, chat_id=usr.chat_id, parse_mode='Markdown')
+    Context.s.add(usr)  # muss ausgeführt werden, damits geschrieben wird
+    Context.s.commit()
 
 
 def config(bot, update):
@@ -735,7 +753,10 @@ def show_cfg_food(bot, update, usr):
     Zurzeit steht dort nur ein Hinweis, dass dieser Service noch in Arbeit ist.
     :param usr: User-Object aus models.py
     """
-    fav_food = str.join(', ', usr.fav_food.split(',')).title()
+    if usr.fav_food == []:
+        fav_food = ''
+    else:
+        fav_food = str.join(', ', usr.fav_food.split(',')).title()
     msg_txt = Context.strings['config_food'].format(str(fav_food))
     keyboard = [[InlineKeyboardButton(Context.strings['config_btn_back'],
                                       callback_data='cfg_main'),
@@ -778,7 +799,7 @@ def show_cfg_food_del(bot, update, usr):
     for fav in usr.fav_food.split(','):
         keyboard.append([InlineKeyboardButton(
             fav, callback_data='cfg_delfood,'+fav)])
-    markup = InlineKeyboardMarkup(keyboard)
+    markup = InlineKeyboardMarkup(keyboard) #todo, was wenn der fav_food string leer ist?
     try:  # to find related message
         msg_id = update.callback_query.message.message_id
         bot.edit_message_text(
@@ -815,7 +836,7 @@ def show_cfg_lan(bot, update, usr):
                  ]]
     markup = InlineKeyboardMarkup(keyboard)
     bot.edit_message_text(
-        text=msg_txt,
+        text=emojize(msg_txt,use_aliases=True),
         chat_id=chat_id,
         message_id=msg_id,
         parse_mode='Markdown',
