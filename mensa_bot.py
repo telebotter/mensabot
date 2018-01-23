@@ -177,11 +177,11 @@ def main():
                                                            usr.first_name])
             Context.job_dict['abo'][usr.chat_id] = usr_abo_job
 
-
-    #Context.s.commit()  # TODO: need?
+    Context.s.add(usr)
+    Context.s.commit()  # TODO: need?
     logging.info('Stündlicher Alarmcheck wird erstellt...')
     job_alarm_check = updater.job_queue.run_repeating(weiterleit_job,
-                                                      interval=360, first=0)
+                                                      interval=1, first=0)
 
     # START TELEGRAM BOT
     updater.start_polling()
@@ -239,7 +239,8 @@ def look_for_fav_food_job(bot, job):
                     fav_food_list.append(alarmjob_tmp)  # TODO: rename?
                     alarm_counter += 1
                 Context.job_dict['fav_foods'] = {usr.chat_id: fav_food_list}
-
+        Context.s.add(usr)
+    Context.s.commit()
 
 def choose_alarm_text(food):
     """
@@ -308,6 +309,7 @@ def user_stops_abo(bot, update):
         logging.warning('User versucht abo zu stoppen das nicht existiert')
         logging.warning(usr.chat_id+'; '+usr.first_name)
     bot.send_message(chat_id=update.message.chat_id, text = msg_txt)
+    Context.s.add(usr)
     Context.s.commit()
     logging.info('User hat den Aboservice gekündigt')
 
@@ -351,6 +353,7 @@ def user_sets_abo(bot, update, args, job_queue):
     Context.job_dict['abo'][usr.chat_id] = job_queue.run_daily(abo_food_request,usr.abo_time,
             context=[morgen,update.message.chat_id,
                 update.message.from_user.first_name])
+    Context.s.add(usr)
     Context.s.commit()
     msg_txt = emojize(Context.strings['user_set_abo_text'].format(usr.abo_time),
                       use_aliases=True)
@@ -500,10 +503,7 @@ def favfood(bot, update, args):
         show_cfg_food(bot, update, usr)
         return
     # argumente an string anhängen.....
-    try:
-        favs = usr.fav_food.split(',')
-    except Exception:
-        favs = [] #falls kein eintrag vorhanden ist
+    favs = usr.fav_food.split(',')
     for arg in args:
         favs.append(arg)
     usr.fav_food = str.join(',', favs)
@@ -790,12 +790,17 @@ def show_cfg_food_del(bot, update, usr):
     eingetragenen Essen. Um ein essen zu löschen wird der string als data[1]
     übergeben und dann vom button handler an die delete funktion übergeben.
     """
-    data = update.callback_query.data.split(',')
-    if len(data) > 1:
-        del_fav_food(usr, data[1])
+    if update.callback_query:
+        data = update.callback_query.data.split(',')
+        if len(data) > 1:
+            del_fav_food(usr, data[1])
 
     msg_txt = Context.strings['config_food_del']
-    keyboard = []
+    keyboard = [[InlineKeyboardButton(Context.strings['config_btn_back'],
+                                      callback_data='cfg_food'),
+                 InlineKeyboardButton(Context.strings['config_btn_cancel'],
+                                      callback_data='cfg_cancel')
+                 ]]
     for fav in usr.fav_food.split(','):
         keyboard.append([InlineKeyboardButton(
             fav, callback_data='cfg_delfood,'+fav)])
@@ -827,7 +832,6 @@ def show_cfg_lan(bot, update, usr):
         """
     msg_id = update.callback_query.message.message_id
     chat_id = update.callback_query.from_user.id
-    fav_food = str.join(', ', usr.fav_food.split(',')).title()
     msg_txt = Context.strings['config_lan']
     keyboard = [[InlineKeyboardButton(Context.strings['config_btn_back'],
                                       callback_data='cfg_main'),
@@ -900,7 +904,9 @@ def del_fav_food(usr, food):
     :param usr: User-Object from models.py
     :param food: String of food to be removed from list
     """
-    favs = usr.fav_food.split(',')
+    favs = usr.fav_food
+    if not len(favs) == 0:
+        favs = usr.fav_food.split(',')
     new_favs = [x for x in favs if food not in x]
     new_favs = str.join(',', new_favs)
     usr.fav_food = new_favs
@@ -908,9 +914,6 @@ def del_fav_food(usr, food):
     Context.s.commit()
 
 
-
-# TODO: '\U0001F92F \U00002639 \U0001F9D1\U0001F3FD'
-# ...sowas in die gkconfig.ini reinballern!
 # TODO: funktionen sortieren und ggf. einige auslagern zB alle
 # handler-functionen in ne functions.py (dafür müssen wir aber erst diese
 # nervige Context klasse loswerden ;) )
